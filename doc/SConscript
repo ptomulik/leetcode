@@ -53,7 +53,7 @@ except KeyError:
 # deps += env.TeXASImport( ['lpas.cls'], progname = 'latex',
 #                KPSVARIABLES = {'TEXMFHOME' : '../../../../share/texmf:'} )
 
-contests = {
+problems = {
     '1739' : {
         'svgs'    : [],
         'gplots'  : [],
@@ -72,37 +72,36 @@ contests = {
 deps =  [ 'leetcode.cls' ]
 
 
-for name, contest in contests.items():
-    contestvers = contest.get('version')
-    contestdeps = contest.get('deps',[]) + deps
-    contestplts = []
+for name, problem in problems.items():
+    problemdeps = problem.get('deps',[]) + deps
+    problemplts = []
 
-    for svg in contest.get('svgs',[]):
+    for svg in problem.get('svgs',[]):
         env.SVGPDF(svg)
-    for gp in contest.get('gplots',[]):
+    for gp in problem.get('gplots',[]):
         kw = dict()
         try:
             kw = gp[1]
         except IndexError:
             pass
-        contestdeps += (env.GplotGraph(gp[0], **kw)[1:])
+        problemdeps += (env.GplotGraph(gp[0], **kw)[1:])
 
 
-    pdf = env.TeXASPDF(name, "%s.tex" % name, deps = contestdeps, version = contestvers)
+    pdf = env.TeXASPDF(name, "%s.tex" % name, deps = problemdeps)
 
     # Tar is unavailable on some platforms (windows e.g) ...
     # On mingw/windows (BASH CLI for example) it has a bug with commandline paths
     # handling (e.g. 'a\t' is interpreted as a + tab).
     if SCons.Tool.tar.exists(env) and not platform.system() == 'Windows':
         src = env.TeXASChildren(pdf)
-        tgz = env.TeXASTarGz(name, src, strip_dirs = '..', version = contestvers)
+        tgz = env.TeXASTarGz(name, src, strip_dirs = '..')
     else:
         tgz = []
 
-    env.Alias(name, pdf + tgz)
-    env.AlwaysBuild(name)
+    env.Alias("doc-%s" % (name,), pdf + tgz)
+    env.AlwaysBuild("doc-%s" % (name,))
 
-env.Alias('pdf', contests.keys())
+env.Alias('pdf', [ "doc-%s" % (n,) for n in problems.keys()])
 env.AlwaysBuild('pdf')
 
 # vim: set syntax=python expandtab tabstop=4 shiftwidth=4:
