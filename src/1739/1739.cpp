@@ -62,9 +62,9 @@ public:
     {
         auto const [ k, m ] = thr(n);
         unsigned const int r = m - n;
-        long double const u = (2.0 * k + 1);
-        long double const d = u * u - 8.0 * r;
-        long double const l = (u - std::sqrt(d)) / 2.0;
+        long double const b = (2.0 * k + 1);
+        long double const d = b * b - 8.0 * r;
+        long double const l = (b - std::sqrt(d)) / 2.0;
 
         return k * (k + 1) / 2 - static_cast<unsigned int>(l);
     }
