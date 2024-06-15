@@ -69,18 +69,3 @@ public:
         return k * (k + 1) / 2 - static_cast<unsigned int>(l);
     }
 };
-
-int main()
-{
-    const int numbers[8] = {1, 4, 10, 20, 35, 56, 84, 120};
-
-    Solution s;
-
-    for (int n = 1; n <= 120; n++) {
-        std::cout << "n: " << n << ", f: " << s.minimumBoxes(n) << std::endl;
-    }
-//    for (unsigned int n = 1; n < 126; ++n) {
-//        std::cout << "n: " << n << ", thr(n): " << thr(n) << std::endl;
-//    }
-    return 0;
-}
