@@ -59,13 +59,11 @@ problems = {
         'gplots'  : [],
         #    'deps'    : [],
     },
-
-##    'lpas9' : {
-##        'version' : '1.0.0',
-##        'svgs'    : [],
-##        'gplots'  : [],
-##        #    'deps'    : [],
-##    }
+    '1675' : {
+        'svgs'    : [],
+        'gplots'  : [],
+        #    'deps'    : [],
+    },
 }
 
 # common deps

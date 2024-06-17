@@ -22,12 +22,13 @@
 Import('env')
 
 problems = [
+    '1675',
     '1739',
     '3161',
 ]
 
 for name in problems:
-    exe = env.Program("%s/test.cpp" % (name,))
+    exe = env.Program("%s/test.cpp" % (name,), CXXFLAGS = ['-std=c++20'])
     env.Alias("src-%s" % (name,), exe)
     env.AlwaysBuild("src-%s" % (name,))
 

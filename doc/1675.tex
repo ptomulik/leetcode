@@ -1,0 +1,235 @@
+\documentclass[paper=a4,parskip=half,DIV=12]{leetcode}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{courier}
+\usepackage{tgtermes,newtxtext,newtxmath}
+\usepackage[pdftex,colorlinks,allcolors=blue]{hyperref}
+\usepackage{natbib}
+
+\usepackage{amsmath,amsfonts}
+\usepackage{tikz}
+\usetikzlibrary{arrows,3d,patterns,calc}
+
+\setcitestyle{numbers,square,comma}
+
+\begin{document}
+
+\serietitle{LeetCode contests solutions}
+\title{1675. Minimize Deviation in Array~\cite{leetcode:1675}}
+\subtitle{}
+\author{Paweł Tomulik}
+\date{2024-06-16}
+\maketitle
+
+\section{Description}
+\label{sec:description}
+
+You are given an array \texttt{nums} of $n$ positive integers.
+
+You can perform two types of operations on any element of the array any number
+of times:
+
+\begin{itemize}
+  \item If the element is \textbf{even}, \textbf{divide} it by $2$. For example, if
+    the array is \texttt{[1,2,3,4]}, then you can do this operation on the
+    last element, and the array will be \texttt{[1,2,3,2]}.
+  \item
+    If the element is \textbf{odd}, \textbf{multiply} it by $2$. For example,
+    if the array is \texttt{[1,2,3,4]}, then you can do this operation on the first
+    element, and the array will be \texttt{[2,2,3,4]}.
+\end{itemize}
+The deviation of the array is the maximum difference between any two elements
+in the array.
+
+Return the minimum deviation the array can have after performing some number of
+operations.
+
+\section{Solution}
+\label{sec:solution}
+
+\subsection{Complexity}
+\label{sec:complexity}
+
+$\mathcal{O}(n \log{(n)})$ or $\mathcal{O}(n)$, depending on the distribution of numbers in \texttt{nums}.
+
+\subsection{Solution description}
+\label{sec:solution-description}
+
+So, we have a set of natural numbers $\{ a_i \}_{i=1,\dots,n} \subset \mathbb{N}$
+from \texttt{nums}:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  a_i = m_i 2^{\alpha_i}, \;\; m_i \text{ odd},
+  \label{eq:DLHTR}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+which we are allowed to transform to any set
+$\{ b_i := m_i 2^{\beta_i} \}_{i=1,\dots,n}$,
+satisfying the constraints imposed on multiplication and division:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+ \beta_i \in \{ 0, 1, \dots, \max{(1, \alpha_i)} \}.
+ \label{eq:3FP4V}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Let's denote
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \begin{aligned}
+    b_{min} = \min_i b_i, && b_{max} = \max_i b_i.
+  \end{aligned}
+  \label{eq:JB95I}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We're asked to find $\sigma_{min} = \min_k{(b_{max,k} - b_{min,k})}$ over all
+sets $\{ b_i \}_k$ satisfying \eqref{eq:3FP4V}.
+
+As seen, all our sets are generated out of a prescribed set of \textbf{odd}
+numbers $\{ m_i \}$. Let
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \begin{aligned}
+    & m_{min} = \min_i m_i, &
+    & m_{max} = \max_i m_i.&
+  \end{aligned}
+  \label{eq:7M3YV}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The set $\{m_i\}$ may be constructed by dividing all even numbers from
+$\{a_i\}$ multiple times, until they became odd. It is not necessarily
+the optimal set we're searching for, but the following condition holds
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \sigma_{min} \le m_{max} - m_{min}
+  \label{eq:66HJL}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsubsection{Solutions for $3 m_{min} > 2 m_{max}$}
+\label{sec:ZCP3Z}
+
+If the range $[m_{min}, m_{max}]$ is far enough from $0$, $\sigma_{min}$ may be
+found in~$\mathcal{O}(n)$. We'll prove that
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  3 m_{min} > 2 m_{max} \implies \sigma_{min} = m_{max} - m_{min}.
+  \label{eq:FX72R}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Proof: suppose, there exists another distribution $\{b_i\}$ of numbers derived
+from $\{a_i\}$ which yields $\sigma_{min} = b_{max} - b_{min} < m_{max} -
+m_{min}$. If it's true, then we shall be able to find it by just multiplying
+numbers from $\{m_i\}$. To ``shrink'' the set, we have to deal with $m_{min}$
+and/or $m_{max}$ in the first place. If we multiply $m_{min}$, then the new
+deviation is $\sigma \ge 2 m_{min} - m_{max} = 3 m_{min} - m_{min} - m_{max} > 2
+m_{max} - m_{min} - m_{max} = m_{max} - m_{min}$. So, even if the set $\{m_i\}$
+consists only of $m_{min}$ and $m_{max}$ (in which case $\sigma = 2 m_{min} -
+m_{max}$), the new deviation is still $\sigma > m_{max} - m_{min}$. Multiplying
+$m_{max}$ alone yields $\sigma \ge 2 m_{max} - m_{min} > m_{max} - m_{min}$.
+Multiplying both numbers yields $\sigma \ge 2 (m_{max} - m_{min}) > m_{max} -
+m_{min}$. It all means, that the set $\{b_i\}$ with $\sigma < m_{max} - m_{min}$
+does not exist.
+
+\textbf{Corollary}: if $3 m_{min} > 2 m_{min}$, the \textbf{$\sigma_{min}$ is
+found in~$\mathcal{O}(n)$} (the cost of finding $m_{min}$ and $m_{max}$).
+
+\subsubsection{Solutions for $2 m_{min} > m_{max} \wedge 3 m_{min} < 2 m_{max}$}
+\label{sec:6GNBB}
+
+For this case we have
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  2 m_{min} - m_{max} \le \sigma_{min} \le m_{max} - m_{min}
+  \label{eq:9W8Z2}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Take any value $m \in [m_{min}, m_{max}]$ (not necessarily from $\{m_i\}$).
+If~$m$ is \textbf{even} and $m < 2 m_{min}$, then $m$, \textbf{has no
+representative} in $\{a_i\}$, that is $m\cdot 2^k \notin \{a_i\}$, for all $k
+\in \{ 0,1,\dots \}$. Especially $m \notin \{a_i\}$.
+
+Proof: suppose that $m$ is present in $\{a_i\}$. It is even, so it must
+contribute to $\{m_i\}$. Once divided, it yields $\frac{a_i}{2} < m_{min}$ and,
+by definition of $m_{min}$: $m_{min} \le \frac{a_i}{2}$, which leads to
+a~contradiction $m_{min} < m_{min}$.
+
+\textbf{Corollary}: if $2 m_{min} > m_{max}$, then \textbf{none of even
+numbers} $m \in (m_{min}, m_{max})$ \textbf{appear} in $\{a_i\}$.
+
+\textbf{Corollary}: if $2 m_{min} > m_{max}$, then \textbf{all $m_i$'s can be
+multiplied} when building the optimal set $\{b_i\}$.
+
+Suppose that $2 m_{min} > m_{max}$ and $3 m_{min} < 2 m_{max}$, for example
+$3 m_{min} = 2 m_{max} - k$, $k$ odd. Then we see that $2 m_{min} - m_{max} =
+3 m_{min} - m_{min} - m_{max} = 2 m_{max} - k - m_{min} - m_{max} = m_{max} - m_{min} - k$.
+If, for example, $\{ m_i \} = \{ m_{min}, m_{max} \}$ (no intermediate values
+$m_i$ between $m_{min}$ and $m_{max}$), then $\sigma_{min} = m_{max} - m_{min} - k$.
+In general, however $m_{max} - m_{min} - k \le \sigma_{min} \le m_{max} -
+m_{min}$. The solution can be found in $\mathcal{O}(n \log{n})$ with
+a~procedure $\mathrm{mindev}(\{ m_i \}, m_{max})$ described
+in~section~\ref{sec:WTM0T}.
+
+\subsubsection{Solutions for $2 m_{min} < m_{max}$}
+\label{sec:2SBRZ}
+
+For this case we have
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  2 \le \sigma_{min} \le m_{max} - m_{min}
+  \label{eq:0Y3X2}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We've already proven, that all ``obstacles`` (even numbers $o_i \in \{ o_i \}
+\subset \{ m_i \}$, not allowed to be further multiplied) are $ \ge2 m_{min}$.
+Let's define the ``obstacles'' more formally
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \{ o_i \} = \{ a_i: a_i \text{ even } \wedge a_i < m_{max} \} \cup
+              \{ 2 a_i: a_i \text{ odd } \wedge  2 a_i < m_{max} \}
+  \label{eq:SDKKJ}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Let
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  o_{min} = \min \{o_i\},
+  \label{eq:T13ET}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+then $b_{min} \le o_{min}$ and $2 m_{min} \le o_{min}$.
+
+All $m_i: 2 m_{min} \le 2 m_i < m_{max}$ may be multiplied without worrying
+that this operation would enlarge~$\sigma$. All the multiplied numbers will
+fall into $[2 m_{min}, m_{max})$. We need, however, to the careful, as some
+resultant numbers may fall into $[2 m_{min}, o_{min})$ -- not covered by
+$\{o_i\}$. These numbers must still be traced. All others may be forgotten.
+
+Let's make a new set $\{ c_i \} = \{ m_i: 2 m_{max} \le 2 m_i \wedge m_i \le o_{min} \}
+\cup \{ 2 m_i: 2 m_i \le o_{min} \}$. The solution may be found in
+$\mathcal{O}(n \log n)$ with the procedure $\mathrm{mindev}(\{ c_i \}, m_{max})$
+from section~\ref{sec:WTM0T}.
+
+\subsection{Procedure \texttt{mindev(cset, mmax)}}
+\label{sec:WTM0T}
+
+The procedure takes a set of numbers $\{ c_i: c_i < c_{i+1} \}$ derived from
+$\{ m_i \}$ and returns the minimum deviation~$\sigma_{min}$. It searches for
+minimum among the deviations of consecutive sets
+$\{ c_1, \dots, c_p, m_{max} \}$, $\{ c_2, \dots, c_p, m_{max}, 2 c_1\}$,
+\dots, $\{ c_p, m_{max}, 2 c_1, \dots, 2 c_{p-1} \}$. These sets are not
+constructed explicitly by the implementation, it only maintains their minima
+and maxima.
+
+The time complexity of~\texttt{mindev} is $\mathcal{O}(p),\; p \le n$, but
+constructing $\{ c_i \}$ costs $\mathcal{O}(n \log n)$.
+
+\bibliographystyle{unsrtnat}
+\bibliography{leetcode}
+
+\end{document}
+
+% vim: set syntax=tex tabstop=2 shiftwidth=2 expandtab spell spelllang=en:
