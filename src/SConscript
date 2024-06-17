@@ -27,9 +27,7 @@ problems = [
 ]
 
 for name in problems:
-    sol = env.Object("%s/solution.cpp" % (name,))
-    tst = env.Object("%s/test.cpp" % (name,))
-    exe = env.Program("%s/test" % (name,), tst + sol)
+    exe = env.Program("%s/test.cpp" % (name,))
     env.Alias("src-%s" % (name,), exe)
     env.AlwaysBuild("src-%s" % (name,))
 
