@@ -50,7 +50,7 @@ public:
         }
 
         std::set<int> cset;
-        for (int i = 0; i < nums.size(); ++i) {
+        for (size_t i = 0; i < nums.size(); ++i) {
             int m = marr[i];
             for (; 2 * m < omin; m *= 2);
             if (mmax < 2 * m && m < omin) {

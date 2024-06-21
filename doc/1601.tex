@@ -1,0 +1,856 @@
+\documentclass[paper=a4,parskip=half,DIV=12]{leetcode}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{courier}
+\usepackage{tgtermes,newtxtext,newtxmath}
+\usepackage[pdftex,colorlinks,allcolors=blue]{hyperref}
+\usepackage{subcaption}
+\usepackage{natbib}
+\usepackage{float}
+
+\usepackage{amsmath,amsfonts}
+\usepackage{tikz}
+\usetikzlibrary{arrows,calc,graphs,matrix,quotes,positioning,arrows.meta}
+
+\setcitestyle{numbers,square,comma}
+
+\begin{document}
+
+\serietitle{LeetCode contests solutions}
+\title{1601. Maximum Number of Achievable Transfer Requests~\cite{leetcode:1601}}
+\subtitle{}
+\author{Paweł Tomulik}
+\date{\today}
+\maketitle
+
+\section{Description}
+\label{sec:description}
+
+We have $n$ buildings numbered from $0$ to $n - 1$. Each building has a~number
+of employees. It's transfer season, and some employees want to change the
+building they reside in.
+
+You are given an array \texttt{requests} where \texttt{requests[i] = [from$_i$,
+to$_i$]} represents an employee's request to transfer from building
+\texttt{from$_i$} to building \texttt{to$_i$}.
+
+All buildings are full, so a list of requests is achievable only if for each
+building, the net change in employee transfers is zero. This means the number
+of employees leaving is equal to the number of employees moving in. For example
+if $n = 3$ and two employees are leaving building $0$, one is leaving building
+$1$, and one is leaving building $2$, there should be two employees moving to
+building $0$, one employee moving to building $1$, and one employee moving to
+building $2$.
+
+Return the \textbf{maximum number of achievable requests}.
+
+\section{Solution}
+\label{sec:solution}
+
+This is a~variant of network flow optimization~\cite{ahuja1993network} --
+the maximum circulation problem.
+
+\subsection{Complexity}
+\label{sec:complexity}
+
+To be determined, but it shall be not worse then $\mathcal{O}(|V|^3 + |A|)$.
+Utilizes Tarjan algorithm for strongly connected components ($\mathcal{O}(|V| + |A|)$)
+at preprocessing, Dijkstra's shortest path algorithm in main loop loop
+(up to $\mathcal{O}(|V|)$ times, I guess) and an iteration which, I guess,
+costs $\mathcal{O}(|A|)$.
+
+\subsection{Solution description}
+\label{sec:solution-description}
+
+Our problem can be modelled using a~directed graph $G = (V, A)$ with a~set of
+nodes $V = \{0, \dots, n-1 \}$ and a~set $A \subseteq V\times V$ of arcs
+(ordered pairs $(i,j) \in A$). Nodes represent buildings, arcs correspond to
+transfer requests. We~assign a~positive integer $u_{ij}$ to each arc $(i, j)
+\in A$
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+    u_{ij} \in \mathbb{N}, \; (i, j) \in A,
+    \label{eq:49EZ8}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+and set it to the~number of transfer requests from building $i$ to $j$. Let
+$r_{ij}$ be the number of achievable requests from $i$ to $j$. In terms of
+network flow $r_{ij}: 0 \le r_{ij} \le u_{ij}$ is a network flow over
+an individual arc~$(i,j)$ and $u_{ij}$ is the capacity of the arc. The maximum
+circulation problem can be stated as follows.
+
+\paragraph{Maximum circulation problem.} Let $r_{ij}$ be a~flow along arc
+$(i,j)$ and $r = \left\lbrace r_{ij} \right\rbrace$. Maximize
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{subequations}
+  \begin{equation}
+    z(r) = \sum_{(i,j) \in A} r_{ij},
+    \label{eq:UDSSB}
+  \end{equation}
+  subject to the constraints
+  \begin{align}
+    \sum_{j: (j,i) \in A} r_{ji} - \sum_{j: (i,j) \in A} r_{ij} = 0, &
+    && \text{ for all } i \in V
+    && \text{(flow through node must be preserved)},
+    \label{eq:N3KEB}
+    \\
+    0 \le r_{ij} \le u_{ij}, &
+    && \text{ for all } (i, j) \in A
+    && \text{(arcs must not be overflowed)}.
+    \label{eq:JV5KC}
+  \end{align}
+  \label{eq:YA13L}
+\end{subequations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+One possible approach is to transform the above problem to a corresponding
+minimum cost flow problem, which is known to have standard solution algorithms.
+If we flood our network by pushing $u_{ij}$ through all arcs $(i,j) \in A$,
+the node flow preservation constraints \eqref{eq:N3KEB} get violated imposing
+imbalances $e_i$ in some nodes. The sum of arc flows in the flooded network is
+then
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{subequations}
+  \begin{equation}
+    z(u) = \sum_{(i,j) \in A} u_{ij},
+    \label{eq:I4AB9}
+  \end{equation}
+   with
+  \begin{align}
+    \sum_{j: (j,i) \in A} u_{ji} - \sum_{j: (i,j) \in A} u_{ij} = e_i, &
+    && \text{ for all } i \in V
+    && \text{(imbalance in node)}.
+    \label{eq:T1XA8}
+  \end{align}
+  \label{eq:D2Y3O}
+\end{subequations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Nodes with $e_i = 0$ will be called {\em balanced}, with $e_i < 0$ -- {\em
+deficit}, and with $e_i > 0$ -- {\em excess}.
+
+The flow $u = \left\lbrace u_{ij} \right\rbrace$ may be decomposed onto $r =
+\left\lbrace r_{ij}\right\rbrace$ and~$x = \left\lbrace x_{ij} \right\rbrace$
+as follows
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{subequations}
+  \begin{equation}
+    z(u) = z(r) + z(x)
+    \label{eq:6M1IM}
+  \end{equation}
+  with the following properties
+  \begin{align}
+    \sum_{j: (j,i) \in A} r_{ji} - \sum_{j: (i,j) \in A} r_{ij} = 0, &
+    && \text{ for all } i \in V
+    && \text{(circular flow)},
+    \label{eq:7FT2U}
+    \\
+    \sum_{j: (j,i) \in A} x_{ji} - \sum_{j: (i,j) \in A} x_{ij} = e_i, &
+    && \text{ for all } i \in V
+    && \text{(remaining flow)},
+    \label{eq:VXBVY}
+    \\
+    r_{ij} \ge 0 \land x_{ij} \ge 0, &
+    && \text{ for all } (i, j) \in A
+    && \text{(flow components are non-negative)},
+    \label{eq:WDOJ8}
+    \\
+    r_{ij} + x_{ij} = u_{ij}, &
+    && \text{ for all } (i, j) \in A
+    && \text{(decomposition of single arc flow)}.
+    \label{eq:K3II1}
+  \end{align}
+  \label{eq:KSU4J}
+\end{subequations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The decomposition \eqref{eq:KSU4J} is non-unique. For example, $(x, r) = (u, 0)$
+is feasible for any input data $(G,u)$, but it's almost never optimal ($z(r) = 0$).
+Among all the feasible decompositions \eqref{eq:KSU4J}, there is at least one
+optimal $(x^{*}, r^{*})$ having maximum circulation $z(r^{*})$. But the same
+decomposition will also have minimum $z(x^{*})$ -- see~\eqref{eq:6M1IM}. What
+follows is, that searching for maximum circulation $z(r^{*})$ is equivalent to
+searching for a~flow $x^{*}$ of minimum cost $z(x^{*})$. The problem might be
+now restated as follows.
+
+\paragraph{Minimum cost flow.} Minimize the flow cost
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{subequations}
+  \begin{equation}
+    z(x) = \sum_{(i,j) \in A}{x_{ij}}
+    \label{eq:0NZPS}
+  \end{equation}
+  subject to
+  \begin{align}
+    \sum_{j: (j,i) \in A}{x_{ji}} - \sum_{j: (i,j) \in A}{x_{ij}} = e_i, &
+    && \text{ for all } i \in V, &&
+    \label{eq:NMX02}
+    \\
+    0 \le x_{ij} \le u_{ij}, &
+    && \text{ for all } (i,j) \in A. &&
+    \label{eq:O0QTB}
+  \end{align}
+  \label{eq:A20W8}
+\end{subequations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This is a standard minimum cost flow problem with arc costs $c_{ij} = 1$, for
+all $(i,j) \in A$ and node supplies $b_i = -e_i$.
+
+\paragraph{Path and cycle flow.} There is a~flow decomposition
+theorem~\cite{ahuja1993network} saying that an arc flow (say, $u$)
+may be decomposed onto path and cycle flow ($x$ and $r$ in our case: $u = x + r$).
+The decomposition is non-unique -- in general, there are multiple ways to
+decompose given arc flow $u$, yielding different values of $(z(x), z(r))$. In
+the maximum circulation problem, we look for a~decomposition $(x^{*},r^{*})$
+having maximum cycle flow $z(r^{*})$, or, alternatively, having minimum cost
+$z(x^{*})$ of its path flow. The path flow $x$ can be expressed as
+a~superposition of prescribed flows $f(P_{kl})$ along individual paths $P_{kl}
+\subseteq A$ connecting deficit nodes $k \in D = \left\lbrace i: e_i < 0
+\right\rbrace$ to excess nodes $l \in E = \left\lbrace i: e_i > 0\right\rbrace$,
+that is
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  x_{ij} = \sum_{P_{kl}: (i,j) \in P_{kl}}{f(P_{kl})}.
+  \label{eq:AIKU9}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\paragraph{Algorithm outline.}
+The proposed method is similar to the {\em consecutive shortest paths}
+algorithm~\cite{ahuja1993network}. We'll identify and subtract path flows
+$f(P_{kl})$ along paths $P_{kl}$ connecting deficit nodes to excess nodes.
+The contribution of a~single path $P_{kl}$ to the cost $z(x)$ is $f(P_{kl})
+\cdot |P_{kl}|$, where $|P_{kl}|$ is the length of $P_{kl}$. The total cost can
+thus be expressed as
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  z(x) = \sum_{P_{kl} \in \mathcal{P}}{f(P_{kl}) \cdot |P_{kl}|},
+  \label{eq:0SQMY}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+where $\mathcal{P}$ denotes a~set of all paths selected to carry the path flow.
+To find a~path flow $x$ of minimum cost, each $P_{kl} \in \mathcal{P}$ must be
+a~shortest path from $k$ to $l$. For any fixed set of values $f(P_{kl})$,
+taking longer paths would inevitably generate higher cost $z(x)$ (which is
+evident from \eqref{eq:0SQMY}). On the other hand, as the path flow $x$ models
+the component of flood $u$ entirely responsible for imbalances $e_i$, it must
+then hold
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \sum_{P_{kl} \in \mathcal{P}}{f(P_{kl})} = \sum_{i \in D}{-e_i} = \sum_{i \in E}{e_i},
+  \label{eq:QDPFI}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+with deficit nodes $D = \left\lbrace i: e_i < 0\right\rbrace$ and excess nodes
+$E = \left\lbrace i: e_i > 0\right\rbrace$. Moreover, the sum of path flows
+originating from any deficit node $k \in D$ must be
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \begin{aligned}
+    & \sum_{l: P_{kl} \in \mathcal{P}}{f(P_{kl})} = -e_k, && \text{ for all } k \in D, &
+  \end{aligned}
+  \label{eq:I9S7G}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+and the sum of path flows sinking to any excess node $l \in E$ must be
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \begin{aligned}
+    & \sum_{k: P_{kl} \in \mathcal{P}}{f(P_{kl})} = e_l, && \text{ for all } l \in E. &
+  \end{aligned}
+  \label{eq:MW3RR}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The flooded network corresponds to a~residual network $G(x^0)$ with $x^0 = 0$
+and residual capacities $r^0 = u$\footnote{For our purposes, we define
+a~residual network $G(x^{\eta})$ w.r.t pseudo-flow $x^{\eta}$ as a graph $G$
+having arc capacities $r_{ij} = u_{ij} - x^{\eta}_{ij}$.}. We treat the
+circular pseudo-flow $r$ as residual capacities and will modify it from
+iteration to iteration. At each iteration $\eta$, a~pair $(k,l) \in D \times E$
+of imbalanced nodes is selected and a~flow along a~shortest path $P_{kl}$ from
+$k$ to $l$ is determined
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  f(P_{kl}) = \min_{(i,j) \in P_{kl}}{\left\lbrace -e_k, e_l, r^{\eta}_{ij} \right\rbrace}.
+  \label{eq:WCR8C}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The flow $f(P_{kl})$ is then added to $x$ and subtracted from $r$ (network
+update):
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \begin{aligned}
+    & x^{\eta+1}_{ij} = x^{\eta}_{ij} + f(P_{kl}) && \text{ for all } (i,j) \in P_{kl}, &
+    \\
+    & r^{\eta+1}_{ij} = r^{\eta}_{ij} - f(P_{kl}) && \text{ for all } (i,j) \in P_{kl}, &
+    \\
+    & e^{\eta+1}_k = e^{\eta}_k + f(P_{kl}), &
+    & \text{ also, if } e^{\eta+1}_k = 0, \text{ then remove }k \text{ from } D, &
+    \\
+    & e^{\eta+1}_l = e^{\eta}_k - f(P_{kl}), &
+    & \text{ also, if } e^{\eta+1}_l = 0, \text{ then remove }l \text{ from } E. &
+  \end{aligned}
+  \label{eq:WTLZT}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Initial values for the iteration are
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \begin{aligned}
+    & x^0 = 0, && r^0 = u. &
+  \end{aligned}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The iteration ends when $D$ is empty. Excess nodes exist as long as at least
+one deficit node exist (guaranteed by the property $\sum_{i \in D} -e_i =
+\sum_{i \in E} e_i$ (see~\eqref{eq:QDPFI}). After the last iteration $\eta$,
+both $D$ and $E$ are empty -- the network is balanced, i.e. $r$ satisfies node
+balance constraints~\eqref{eq:N3KEB}. The maximum circulation is then $z(r^{*})
+= z(r^{\eta})$.
+
+The actual algorithm does not maintain $x$, as we only interested in $r$. It's,
+thus, just enough to keep track of $r$, $e_i$, $D$ and $E$ only.
+
+\paragraph{Strongly connected components.} To guarantee correctness of the
+above algorithm, certain assumptions must be made. For example, the
+textbook~\cite{ahuja1993network} provides a list of assumptions, among which
+there is one we haven't discussed yet:
+
+{\em Assumption 9.4}~\cite{ahuja1993network}. {\em The network $G$ contains an
+uncapacitated directed path (i.e. each arc in the path has infinite capacity)
+between every pair of nodes}.
+
+The textbook imposes this condition by adding {\em artificial} arcs $(1, j)$
+and $(j, 1)$ for each $j \in N$ and assigning a~large cost and infinite
+capacity to each of these arcs (no such arc would appear in a minimum cost
+solution [\dots]).
+
+We won't implement arc costs, as we have implicitly assumed $c_{ij} = 1$.
+Instead of adding artificial arcs, we'd rather impose similar condition by
+removing certain parts of $G$ -- bridges, and leaving only strongly connected
+components for further processing.
+
+A~directed graph is called strongly connected if there is a~path in each
+direction between each pair of nodes (a~path exist from the first node of the
+pair to the second, and another path exists from the second to the first). This
+means, that
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+  \item every node, as well as every arc, of a~strongly connected graph
+    participates in at least one cycle.
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+It shall be noted, that the circulation $z(r)$ is a sum of flows along cycles
+and, thus, it's enclosed entirely within strongly connected components of $G$.
+Eventual bridges between strongly connected components can not contribute to
+the circulation (the condensation graph is acyclic). We can thus just remove
+bridges from $G$, and solve our problem on the new graph consisting of isolated
+strongly connected components only. Identification of bridges for removal can
+be done in $\mathcal{O}(|V| + |A|)$ using Tarjan algorithm.
+
+%%\paragraph{Biconnected components.} Visually it looks like, only biconnected
+%%components of the whole graph matter. Everything, that's not a~part of
+%%a~biconnected component, can not contribute to the circulation. Note, that
+%%biconnectivity may mean: (1) a~graph is 2-node connected (no articulation
+%%points), but also (2) a graph is 2-arc connected (no bridges). The
+%%biconnectivity is defined in context of undirected graphs.
+%%
+%%\paragraph{Strong stuff.} The terms {\em Strong Articulation Points}, {\em
+%%Strong Bridge}, etc. refer specifically to directed graphs. Note, that Tarjan
+%%algorithm work with undirected graphs.  See works of Italiano, Firmani, Laura,
+%%Orlandi and Santaroni.
+
+%%Suppose we have identified all excess and deficit nodes. In a classical
+%%textbook our problem would be modelled by adding two additional nodes $s$
+%%(source) and $t$ (sink) to the original network together with arcs $(s,i)$ from
+%%the source to each deficit node $i$, and arcs $(j,t)$ from each excess node $j$
+%%to $t$. The new arcs $(s,i)$ get assigned capacities $u_{si} = -e_i$, while
+%%the new arcs $(j,t)$ have capacities $u_{jt} = e_j$. We then have to find
+%%a maximum flow from $s$ to $t$ while maintaining minimal cost \eqref{eq:0NZPS}.
+
+%%\paragraph{Example flow decomposition.}
+%%An example flooded network is depicted on figure~\ref{fig:SJ2HQ}. On
+%%sub-figure~\ref{fig:AGNK4}, nodes 0, 3 and 6 are deficit, while nodes 5 and 8
+%%are excess nodes. The equivalent network (w.r.t internal arc flow) is shown on
+%%sub-figure~\ref{fig:FS6JF}. The arcs incident to $s$ have capacities
+%%$u_{s0}=1$, $u_{s3}=3$ and $u_{s6}=2$, while arcs incident to $t$ have $u_{5t}
+%%= 4$ and $u_{8t} = 2$. These values follow directly from node imbalances on
+%%sub-figure~\ref{fig:AGNK4}. The sum of flows over all arcs is
+%%$z(u) = \sum{u_{ij}} = 39$.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%\begin{figure}[H]
+%%  \centering
+%%  \begin{subfigure}[t]{0.42\textwidth}
+%%    \centering
+%%    \begin{tikzpicture}[>=Stealth]
+%%      \graph[
+%%        grow right=2cm,
+%%        branch down=2cm,
+%%        nodes={draw,circle}
+%%      ] {
+%%        {
+%%          0[blue] -> ["4/4"']1 -> ["3/3"'] 2,
+%%          {
+%%            3[blue] <-["4/4"'] 4 <- ["2/2"'] 5[red],
+%%            6[blue] ->["6/6"'] 7 -> ["5/5"'] 8[red]
+%%          }
+%%        };
+%%
+%%        3 ->["3/3"] 0;
+%%        1 ->["1/1"'] 4;
+%%        7 ->["1/1"] 4;
+%%        3 ->["4/4"']6;
+%%        2 ->["3/3"'] 5;
+%%        8 ->["3/3"] 5;
+%%      };
+%%
+%%      \begin{scope}[node distance=1mm,every node/.style={draw,inner sep=2pt},font={\footnotesize}]
+%%        % deficit nodes
+%%        \node [blue,above right=of 0] {-1};
+%%        \node [blue,above right=of 3] {-3};
+%%        \node [blue,above right=of 6] {-2};
+%%        % excess nodes
+%%        \node [red,above right=of 5] {+4};
+%%        \node [red,above right=of 8] {+2};
+%%        % balanced nodes
+%%        \node [above right=of 1] {0};
+%%        \node [above right=of 4] {0};
+%%        \node [above right=of 7] {0};
+%%        \node [above right=of 2] {0};
+%%      \end{scope}
+%%    \end{tikzpicture}
+%%    \caption{Original flooded network with imbalances.}
+%%    \label{fig:AGNK4}
+%%  \end{subfigure}
+%%  \begin{subfigure}[t]{0.55\textwidth}
+%%    \centering
+%%    \begin{tikzpicture}[>=Stealth]
+%%      \graph[
+%%        grow right=2cm,
+%%        branch down=2cm,
+%%        nodes={draw,circle}
+%%      ] {
+%%        s/$s$[blue] -!- {
+%%          0 -> ["4/4"']1 -> ["3/3"']2,
+%%          {
+%%            3 <- ["4/4"']4 <- ["2/2"']5,
+%%            6 -> ["6/6"']7 -> ["5/5"']8
+%%          } -!- t/$t$[red]
+%%        };
+%%
+%%        3 -> ["3/3"]0;
+%%        1 -> ["1/1"']4;
+%%        7 -> ["1/1"]4;
+%%        3 -> ["4/4"']6;
+%%        2 -> ["3/3"']5;
+%%        8 -> ["3/3"]5;
+%%
+%%        s ->[blue,dashed,"1/1"] 0;
+%%        s ->[blue,dashed,"3/3"',out=-60,in=-180] 3;
+%%        s ->[blue,dashed,"2/2"',out=-100,in=-180] 6;
+%%
+%%        5 ->[red,dashed,"4/4"] t;
+%%        8 ->[red,dashed,"2/2"',out=0,in=-90] t;
+%%      };
+%%
+%%      \begin{scope}[node distance=1mm,every node/.style={draw,inner sep=2pt},font={\footnotesize}]
+%%        % deficit nodes
+%%        \node [above right=of 0] {0};
+%%        \node [above right=of 3] {0};
+%%        \node [above right=of 6] {0};
+%%        % excess nodes
+%%        \node [above right=of 5] {0};
+%%        \node [above right=of 8] {0};
+%%        % balanced nodes
+%%        \node [above right=of 1] {0};
+%%        \node [above right=of 4] {0};
+%%        \node [above right=of 7] {0};
+%%        \node [above right=of 2] {0};
+%%      \end{scope}
+%%    \end{tikzpicture}
+%%    \caption{Corresponding network with source and sink.}
+%%    \label{fig:FS6JF}
+%%  \end{subfigure}
+%%  \caption{Example flooded network. Arc labels $f_{ij}/u_{ij}$ represent arc
+%%           flows $f_{ij}$ over capacities $u_{ij}$. Numbers in rectangles near
+%%           to nodes are node imbalances.}
+%%  \label{fig:SJ2HQ}
+%%\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%%An example decomposition $r$, $x$, which minimizes the cost $z(x)$, is given on
+%%figure~\ref{fig:W6D11}. From the sub-figure~\ref{fig:3SOTE} -- the cost $z(x) =
+%%\sum{x_{ij}} = 19$ (not counting the arcs incident to $s$ and $t$), and thus,
+%%the maximum circulation is~$z(r) = z(u) - z(x) = 39 - 19 = 20$. The
+%%decomposition is a~path and cycle flow decomposition~\cite{ahuja1993network}
+%%with the following components:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%\begin{itemize}
+%%  \item $x$ is a~flow consisting of path flows (from shortest to longest):
+%%
+%%      $2$ units sent through path $s-6-7-8-t$ of length $2$,
+%%      $\bullet$~$1$ unit send through path $s-0-1-2-5-t$ of length $3$, and
+%%      $\bullet$~$3$ units sent through path $s-3-6-7-8-5-t$  of length $4$, the
+%%      total cost is $z(x) = 2\cdot2 + 1\cdot3 + 3\cdot 4 = 19$. The path
+%%      lengths used for calculations do not include arcs incident to $s$ and $t$.
+%%
+%%  \item $r$ is a~flow consisting of cycle flows:
+%%
+%%      $1$~unit sent over cycle $0-1-4-3-0$ (cycle length 4),
+%%      $\bullet$~$2$ units over $0-1-2-5-4-3-0$ (cycle length 6),
+%%      $\bullet$~$1$ unit over $6-7-4-3-6$ (cycle length 4). The circulation is
+%%      $1\cdot 4 + 2\cdot 6 + 1\cdot 4 = 20$.
+%%\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%\begin{figure}[H]
+%%  \centering
+%%  \begin{subfigure}[t]{0.42\textwidth}
+%%    \centering
+%%    \begin{tikzpicture}[>=Stealth]
+%%      \graph[
+%%        grow right=2cm,
+%%        branch down=2cm,
+%%        nodes={draw,circle}
+%%      ] {
+%%        {
+%%          0 -> ["3/4"']1 -> ["2/3"'] 2,
+%%          {
+%%            3 <-["4/4"'] 4 <- ["2/2"'] 5,
+%%            6 ->["1/6"'] 7 -> ["0/5"'] 8
+%%          }
+%%        };
+%%
+%%        3 ->["3/3"] 0;
+%%        1 ->["1/1"'] 4;
+%%        7 ->["1/1"] 4;
+%%        3 ->["1/4"']6;
+%%        2 ->["2/3"'] 5;
+%%        8 ->["0/3"] 5;
+%%      };
+%%
+%%      \begin{scope}[node distance=1mm,every node/.style={draw,inner sep=2pt},font={\footnotesize}]
+%%        % deficit nodes
+%%        \node [above right=of 0] {0};
+%%        \node [above right=of 3] {0};
+%%        \node [above right=of 6] {0};
+%%        % excess nodes
+%%        \node [above right=of 5] {0};
+%%        \node [above right=of 8] {0};
+%%        % balanced nodes
+%%        \node [above right=of 1] {0};
+%%        \node [above right=of 4] {0};
+%%        \node [above right=of 7] {0};
+%%        \node [above right=of 2] {0};
+%%      \end{scope}
+%%    \end{tikzpicture}
+%%    \caption{Circular flow $r = \left\lbrace r_{ij}\right\rbrace$.}
+%%    \label{fig:8U00Z}
+%%  \end{subfigure}
+%%  \begin{subfigure}[t]{0.55\textwidth}
+%%    \centering
+%%    \begin{tikzpicture}[>=Stealth]
+%%      \graph[
+%%        grow right=2cm,
+%%        branch down=2cm,
+%%        nodes={draw,circle}
+%%      ] {
+%%        s/$s$[blue] -!- {
+%%          0 -> ["1/4"']1 -> ["1/3"']2,
+%%          {
+%%            3 <- ["0/4"']4 <- ["0/2"']5,
+%%            6 -> ["5/6"']7 -> ["5/5"']8
+%%          } -!- t/$t$[red]
+%%        };
+%%
+%%        3 -> ["0/3"]0;
+%%        1 -> ["0/1"']4;
+%%        7 -> ["0/1"]4;
+%%        3 -> ["3/4"']6;
+%%        2 -> ["1/3"']5;
+%%        8 -> ["3/3"]5;
+%%
+%%        s ->[blue,dashed,"1/1"] 0;
+%%        s ->[blue,dashed,"3/3"',out=-60,in=-180] 3;
+%%        s ->[blue,dashed,"2/2"',out=-100,in=-180] 6;
+%%
+%%        5 ->[red,dashed,"4/4"] t;
+%%        8 ->[red,dashed,"2/2"',out=0,in=-90] t;
+%%      };
+%%
+%%      \begin{scope}[node distance=1mm,every node/.style={draw,inner sep=2pt},font={\footnotesize}]
+%%        % deficit nodes
+%%        \node [above right=of 0] {0};
+%%        \node [above right=of 3] {0};
+%%        \node [above right=of 6] {0};
+%%        % excess nodes
+%%        \node [above right=of 5] {0};
+%%        \node [above right=of 8] {0};
+%%        % balanced nodes
+%%        \node [above right=of 1] {0};
+%%        \node [above right=of 4] {0};
+%%        \node [above right=of 7] {0};
+%%        \node [above right=of 2] {0};
+%%      \end{scope}
+%%    \end{tikzpicture}
+%%    \caption{Path flow $x = \left\lbrace x_{ij}\right\rbrace$.}
+%%    \label{fig:3SOTE}
+%%  \end{subfigure}
+%%  \caption{One of the optimal solutions for the network from figure \ref{fig:SJ2HQ}.}
+%%  \label{fig:W6D11}
+%%\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%Let's consider certain corner cases, before proceeding to the actual solution.
+%%
+%%\paragraph{Loops.}
+%%Circulation is only possible along cycles in the graph. The simplest possible
+%%cycle is a~loop. It corresponds to a request to stay in same building $i$. All
+%%such requests can be accepted at hand, as they satisfy both
+%%constraints~\eqref{eq:YA13L}. The maximum number of possible
+%%transfers along a~loop is always $r_{ii} = u_{ii}$.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%\begin{figure}[htbp]
+%%  \centering
+%%  \begin{tikzpicture}
+%%    \graph[nodes={draw,circle}, clockwise=2] {
+%%      i; j;
+%%      i -> [out=-45, in=45, looseness=7, "$u_{ii}$"] i;
+%%      i -> [bend right, "$u_{ij}$"] j;
+%%    };
+%%  \end{tikzpicture}
+%%  \caption{Example of a~loop in the graph. The number of requests in the loop
+%%  is $u_{ii}$. The maximum possible number of ``transfers'' is also $u_{ii}$
+%%  (all employees are allowed to stay in their buildings).}
+%%  \label{fig:4B7KI}
+%%\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%Technically, we can just sum up all flows along existing loops and just remove
+%%them from the graph before proceeding with actual optimization or (better) sum
+%%up all requests of type $(i, i)$ during graph construction without adding these
+%%loops to the graph.
+%%
+%%\paragraph{Pure sources and sinks (``terminal'' nodes).}
+%%Nodes that aren't part of any cycles can be removed as well
+%%(figure~\ref{fig:57L58}), as they can't contribute to the circulation.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%\begin{figure}[htbp]
+%%  \centering
+%%  \begin{tikzpicture}
+%%    \matrix[nodes in empty cells] {
+%%      & \node[anchor=north]{\tikz{\graph[nodes={draw,circle}] {
+%%        0 -> 1[x=1] -> 2 -> 0;
+%%        0 -> 3[r=1] ->[red,dashed] 4[red,dashed,r=1.5];
+%%        2 -> 3;
+%%        2 ->[red,dashed] 4;
+%%        5[r=-0.5,x=0.75,red,dashed] ->[red,dashed] 3;
+%%      };}};
+%%
+%%      & \node[anchor=north,minimum height=3cm]{$\implies$}; &
+%%
+%%      \node[anchor=north]{\tikz{\graph[nodes={draw,circle}] {
+%%        0 -> 1[x=1] -> 2 -> 0;
+%%        0 ->[red,dashed] 3[r=1,red,dashed];
+%%        2 ->[red,dashed] 3;
+%%      };}};
+%%
+%%      & \node[anchor=north,minimum height=3cm]{$\implies$}; &
+%%
+%%      \node[anchor=north]{\tikz{\graph[nodes={draw,circle}] {
+%%        0 -> 1[x=1] -> 2 -> 0;
+%%      };}}; & \\
+%%
+%%      & \node{original}; & & & & \node{reduced}; & \\
+%%    };
+%%  \end{tikzpicture}
+%%  \caption{Eliminating ``terminal'' nodes. Initially, node $5$ has
+%%           indegree=0, and $4$ has outdegree=$0$. After removal of $4$ and $5$,
+%%           node $3$ becomes terminal (outdegree=$0$). Removing node $3$
+%%           leaves only nodes belonging to a~cycle.}
+%%  \label{fig:57L58}
+%%\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%This can be done by iterative removal of nodes whose
+%%indegree\footnote{The terms {\em indegree/outdegree} denote the number of
+%%incoming/outgoing arcs for a node.} or outdegree is zero. Note, that this
+%%includes isolated nodes as well. The removal of ``terminal'' nodes is an
+%%iterative process, as removing one ``terminal'' may create new ``terminals''.
+
+%%\paragraph{Problem formulation.}
+%%To find the maximum circulation, we may initially ``flood'' the network by
+%%setting $r_{ij} = u_{ij}$ and then eliminate non-circular flow component. What
+%%remains after this operation, is always a~circulation (not necessarily
+%%maximum). The concept is based on the flow decomposition
+%%theorem~\cite{ahuja1993network} which states that every non-negative arc flow
+%%$r$ can be represented as a path and cycle flow (though not necessarily
+%%uniquely). This way, the total flow $\sum{u_{ij}}$ in the ``flooded'' network
+%%may be decomposed onto non-circular and circular flows as follows
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%\begin{equation}
+%%  \sum_{(i,j) \in A} u_{ij} =
+%%  \underbrace{\sum_{P \in \mathcal{P}} f(P) |P|}_{\text{Non-circular flow}} +
+%%  \underbrace{\sum_{W \in \mathcal{W}} {f(W) |W|}}_{\text{Circular flow}} = \mathrm{const}.
+%%\label{eq:XW7AC}
+%%\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%The pair $\left(\mathcal{P}, \mathcal{W}\right) \in \mathcal{D}$
+%%in~\eqref{eq:XW7AC} represents a~flow decomposition (one of many possible).
+%%The~decomposition is defined by a~set $\mathcal{P}$ of path flows $P$, and a~set
+%%$\mathcal{W}$ of cycle flows $W$. Each path flow $P$ is specified by a~path
+%%(sequence of arcs) in graph $G$ and a~flow $f(P)$ along the path. Similarly,
+%%the cycle flow $W$ is specified by a~cycle in graph $G$ and a~flow $f(W)$ along
+%%the cycle. $|P|$ and $|W|$ are, correspondingly, path and cycle lengths (number
+%%of arcs). Among all possible decompositions $\mathcal{D}$, there is at least
+%%one, which maximizes the resulting circulation (and, naturally, minimizes the
+%%non-circular flow in~\eqref{eq:XW7AC}).
+%%
+%%By setting $r_{ij} = u_{ij}$ for all $(i,j) \in A$ we'll impose imbalances
+%%$e_i$ in nodes
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%\begin{equation}
+%%  \begin{aligned}
+%%    e_i = \sum_{j: (j,i) \in A} r_{ji} - \sum_{j: (i,j) \in A} r_{ij}, &
+%%    && \text{ for all } i \in V.
+%%  \end{aligned}
+%%  \label{eq:6NYTI}
+%%\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%In such a setup, we can identify {\em deficit} nodes having $e_i < 0$,
+%%{\em excess} nodes having $e_i > 0$ and search for directed paths from deficit
+%%to excess nodes. The flow decomposition theorem provides us with an algorithmic
+%%way of identifying path and cycle flows. It's summarized as follows.
+
+%%\paragraph{Identifying a path flow.}
+%%Suppose that $i_0$ is a deficit node. Then some arc $(i_0, i_1)$ carries a
+%%positive flow. If $i_1$ is an excess node, we stop; otherwise, the mass balance
+%%constraint of node $i_1$ implies that some other arc $(i_1, i_2)$ carries
+%%positive flow. We repeat this until we encounder an excess node, or we revisit
+%%a~previously examined node. In the former case, we obtain a directed path $P$
+%%from the deficit node $i_0$ to some excess node $i_k$. In the later case we
+%%obtain a directed cycle $W$. If we obtain a~directed path $P$, we let $f(P) =
+%%\min{\left\lbrace-e(i_0), e(i_k), \min{\left\lbrace r_{ij}: (i,j) \in P
+%%\right\rbrace}\right\rbrace}$.
+%%
+%%%%and redefine $e(i_0) := e(i_0) + f(P)$, $e(i_k) :=
+%%%%e(i_k) - f(P)$ and $r_{ij} := r_{ij} - f(P)$ for each arc $(i,j) \in P$. If we
+%%%%obtain a directed cycle $W$, we let $f(W) = \min{\left\lbrace r_{ij}:(i,j) \in
+%%%%W\right\rbrace}$ and redefine $r_{ij} = r_{ij} - f(W)$ for each arc $(i,j) \in
+%%%%W$. We also add the value $f(W) \cdot |W|$ to the final result, where $|W|$ is
+%%%%the number of arcs in the cycle $W$.
+%%
+%%We repeat this process with the redefined problem until all node imbalances
+%%$e_i$ are zero. We then add all the the remaining arc flows $r_{ij}$ to the
+%%final result (the remaining flow is a circulation).
+%%
+%%The time complexity of the above algorithm is said to be $O(nm)$~\cite{ahuja1993network}.
+%%
+%% For~a 2-node cycle $i \to j \to i$ (figure~\ref{fig:DRV1T}), the maximum number
+%% $r_{ij}$ of possible transfers is
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% \begin{equation}
+%%   r_{ij} = 2 u_{\min} = 2 \min{(u_{ij}, u_{ji})}.
+%%   \label{eq:FMMLO}
+%% \end{equation}
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% \begin{figure}[htbp]
+%%   \centering
+%%   \begin{tikzpicture}
+%%     \matrix {
+%%       \graph[nodes={draw,circle}, clockwise=2] {
+%%         i; j;
+%%         i -> [bend left, "$u_{ij}$"] j ->[bend left,"$u_{ji}$"] i;
+%%       }; & \node {$\implies$}; & \graph[nodes={draw,circle}, clockwise=2] {
+%%         i; j;
+%%         i -> [bend left, "$u_{\min}$"] j ->[bend left,"$u_{\min}$"] i;
+%%       }; \\
+%%       \node {requested}; & & \node {possible}; \\
+%%     };
+%%   \end{tikzpicture}
+%%   \caption{Example two-node cycle. The number of requests from $i$ to $j$ is
+%%   $u_{ij}$, from $j$ to $i$ is $u_{ji}$. The maximum possible number of mutual
+%%   transfers depends on the $u_{\min} = \min{(u_{ij}, u_{ji})}$.}
+%%   \label{fig:DRV1T}
+%% \end{figure}
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Note, that if we remove all the edges that comprise the cycle, still some edges
+%% may be left on the graph (rejected requests). In this case, the number of
+%% rejected requests is $u_{ij} + u_{ji} - 2 u_{\min}$. Finding the number of
+%% achievable transfers is equivalent to finding the minimum number of requests
+%% that must be rejected.
+%%
+%% For a~three-node/three-edge cycle, as in figure~\ref{fig:U5GUM}, the maximum
+%% possible number of transfers is
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% \begin{equation}
+%%   r_{ijk} = 3 u_{\min} = 3 \min{(u_{ij}, u_{jk}, u_{ki})}
+%%  \label{eq:S95QR}
+%% \end{equation}
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% \begin{figure}[htbp]
+%%   \centering
+%%   \begin{tikzpicture}
+%%     \matrix {
+%%       \graph[nodes={draw,circle}, clockwise=3] {
+%%         i; j; k;
+%%         i ->[bend left, "$u_{ij}$"] j ->[bend left,"$u_{jk}$"]  k ->[bend left, "$u_{ki}$"] i;
+%%       }; & \node {$\implies$}; & \graph[nodes={draw,circle}, clockwise=3] {
+%%         i; j; k;
+%%         i ->[bend left, "$u_{\min}$"] j ->[bend left,"$u_{\min}$"]  k ->[bend left, "$u_{\min}$"] i;
+%%       }; \\
+%%       \node {requested}; & & \node {possible}; \\
+%%     };
+%%   \end{tikzpicture}
+%%   \caption{Example three-node cycle}
+%%   \label{fig:U5GUM}
+%% \end{figure}
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% In general, the~number of possible transfers along an~isolated
+%% $K$-node/$K$-edge cycle is a~multiple of~$K$, and has the form
+%% $t = K u_{\min}$, where $u_{\min}$ is the smallest edge multiplicity along the
+%% path.
+%%
+%% %%We guess, that for a~$K$-node cycle $\mathcal{C}$, the maximum possible number
+%% %%of transfers is
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%\begin{equation}
+%% %%  m_{\mathcal{C}} = K \min_{e_{ij} \in \mathcal{C}}{\{e_{ij}\}}
+%% %%  \label{eq:63VA3}
+%% %%\end{equation}
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Isolated cycles are simple. In reality, however, cycles can partially overlap.
+%% Consider a~three node graph with two different cycles as shown on
+%% figure~\ref{fig:XDUOL}. Total number of requests is $u_{ij} + u_{jk} + u_{ki} +
+%% u_{kj}$, but there are constraints limiting the possible number of transfers.
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% \begin{figure}[htbp]
+%%   \centering
+%%   \begin{tikzpicture}
+%%     \graph[nodes={draw,circle}, clockwise=3]{
+%%       i; j; k;
+%%       i ->[bend left, "$u_{ij}$"] j
+%%         ->[bend left, "$u_{jk}$"] k
+%%         ->[bend left, "$u_{ki}$"] i;
+%%       k ->[bend left, "$u_{kj}$"] j;
+%%     };
+%%   \end{tikzpicture}
+%%   \caption{Example three-node graph with two cycles}
+%%   \label{fig:XDUOL}
+%% \end{figure}
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The edge $j \to k$ is shared between cycles $i \to j \to k \to i$ and $j \to k
+%% \to j$. From the other perspective, the edge $j \to k$ contributes to either
+%% the $i \to j \to k \to i$ or $j \to k \to j$, or to both.
+
+\bibliographystyle{unsrtnat}
+\bibliography{leetcode}
+
+\end{document}
+
+
+% vim: set syntax=tex tabstop=2 shiftwidth=2 expandtab spell spelllang=en:

@@ -18,7 +18,7 @@
 constexpr size_t tree_height(size_t n)
 {
     size_t h = 0;
-    for (; (1 << h) < n; ++h);
+    for (; (1u << h) < n; ++h);
     return 0 == n ? 0 : 1 + h; // = 0 or 1 + ceil(log2(n))
 }
 
@@ -103,13 +103,13 @@ public:
             return 0;
         }
 
-        if (r <= x) {
+        if (r <= (unsigned int)x) {
             return tree[i];
         }
 
         size_t li = 2 * i + 1, ri = 2 * i + 2;
         size_t m  = (l + r) / 2ul;
-        if (m + 1 <= x) {
+        if (m + 1 <= (unsigned int)x) {
             return std::max(query(x, li, l, m), query(x, ri, m + 1, r));
         } else {
             return query(x, li, l, m);
