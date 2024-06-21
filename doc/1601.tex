@@ -1,0 +1,112 @@
+\documentclass[paper=a4,parskip=half,DIV=12]{leetcode}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{courier}
+\usepackage{tgtermes,newtxtext,newtxmath}
+\usepackage[pdftex,colorlinks,allcolors=blue]{hyperref}
+\usepackage{natbib}
+
+\usepackage{amsmath,amsfonts}
+\usepackage{tikz}
+\usetikzlibrary{arrows,3d,patterns,calc}
+
+\setcitestyle{numbers,square,comma}
+
+\begin{document}
+
+\serietitle{LeetCode contests solutions}
+\title{1601. Maximum Number of Achievable Transfer Requests~\cite{leetcode:1601}}
+\subtitle{}
+\author{Paweł Tomulik}
+\date{2024-06-20}
+\maketitle
+
+\section{Description}
+\label{sec:description}
+
+We have $N$ buildings numbered from $0$ to $N - 1$. Each building has a number
+of employees. It's transfer season, and some employees want to change the
+building they reside in.
+
+You are given an array \texttt{requests} where \texttt{requests[i] = [from$_i$,
+to$_i$]} represents an employee's request to transfer from building
+\texttt{from$_i$} to building \texttt{to$_i$}.
+
+All buildings are full, so a list of requests is achievable only if for each
+building, the net change in employee transfers is zero. This means the number
+of employees leaving is equal to the number of employees moving in. For example
+if $N = 3$ and two employees are leaving building $0$, one is leaving building
+$1$, and one is leaving building $2$, there should be two employees moving to
+building $0$, one employee moving to building $1$, and one employee moving to
+building $2$.
+
+Return the \textbf{maximum number of achievable requests}.
+
+\section{Solution}
+\label{sec:solution}
+
+\subsection{Complexity}
+\label{sec:complexity}
+
+\subsection{Solution description}
+\label{sec:solution-description}
+
+This problem can be modelled with a~directed graph. Graph nodes represent
+buildings, edges correspond to transfer requests. Edges will have integer
+weights assigned:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+    e_{ij}, \; i, j \in \{ 0, 1, \dots N-1 \}, \; i \neq j
+    \label{eq:49EZ8}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+where $e_{ij}$ is a~number of transfer requests from building $i$ to $j$. If
+there are no transfers from $i$ to $j$, then there is no edge $i \to j$.
+
+Consider a pair of nodes $(i, j)$ that form cycle $i \to j \to i$. The maximum
+number of possible transfers between the corresponding buildings is then
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  m_2 = 2 \min{(e_{ij}, e_{ji})}
+  \label{eq:FMMLO}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Going further, for a~three-node cycle $(i, j, k)$, we have
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  m_3 = 3 \min{(e_{ij}, e_{jk}, e_{ki})}
+  \label{eq:FMMLO}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\bibliographystyle{unsrtnat}
+\bibliography{leetcode}
+
+\end{document}
+
+%\label{??:63VA3}
+%\label{??:W6D11}
+%\label{??:SJ2HQ}
+%\label{??:0NZPS}
+%\label{??:A20W8}
+%\label{??:6M1IM}
+%\label{??:KSU4J}
+%\label{??:KRXUE}
+%\label{??:P2GTP}
+%\label{??:I4AB9}
+%\label{??:D2Y3O}
+%\label{??:XW7AC}
+%\label{??:6NYTI}
+%\label{??:57L58}
+%\label{??:HP3C4}
+%\label{??:UDSSB}
+%\label{??:YA13L}
+%\label{??:4B7KI}
+%\label{??:XDUOL}
+%\label{??:U5GUM}
+%\label{??:S95QR}
+%\label{??:DRV1T}
+
+% vim: set syntax=tex tabstop=2 shiftwidth=2 expandtab spell spelllang=en:

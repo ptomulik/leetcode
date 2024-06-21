@@ -59,6 +59,11 @@ problems = {
         'gplots'  : [],
         #    'deps'    : [],
     },
+    '1601' : {
+        'svgs'    : [],
+        'gplots'  : [],
+        #    'deps'    : [],
+    },
     '1675' : {
         'svgs'    : [],
         'gplots'  : [],
