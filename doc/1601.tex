@@ -46,28 +46,38 @@ Return the \textbf{maximum number of achievable requests}.
 \section{Solution}
 \label{sec:solution}
 
+A similar problem, called ``Reallocation of Housing'', was mentioned
+in~\cite{ahuja1993network}. It's a~variant of network flow optimization.
+Solving the reallocation problem is related to identification of directed
+cycles in corresponding reallocation graph. The solution may be obtained by
+{\em topological sorting} method.
+
 \subsection{Complexity}
 \label{sec:complexity}
 
 \subsection{Solution description}
 \label{sec:solution-description}
 
-This problem can be modelled with a~directed multi-graph. Graph nodes represent
-buildings, edges correspond to transfer requests. Instead of drawing multiple
-edges connecting a~single pair $i,j$ of vertices, we'll just draw a~single arc
-and assign it an integer $r_{ij}$ to represent multiplicity:
+Our problem can be modelled with a~directed graph. Graph vertices represent
+buildings, arcs correspond to possible transfers between the buildings. We
+assign an~integer value $r_{ij}$ to each arc $i \to j$
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{equation}
-    r_{ij} \in \mathbb{N}, \; i, j \in \{ 0, 1, \dots N-1 \}.
+    r_{ij} \in \mathbb{N}, \; i, j \in \{ 0, 1, \dots N-1 \},
     \label{eq:49EZ8}
 \end{equation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+and set it to the~number of transfer requests from $i$ to $j$. In terms of
+network flow, $r_{ij}$ is the maximum capacity of arc $i \to j$. The minimum
+capacity is $0$ in this case.
 
-Balanced transfers are realized along cycles on the graph. Simplest possible
-case is a~request to stay in same building -- a~{\em loop} on the graph.
-Next example is a pair of nodes~${(i, j)}$ forming a cycle $i \to j \to i$
-(figure~\ref{fig:DRV1T}). The maximum number $t_{ij}$ of possible transfers
-between buildings $i$ and $j$ is in this case
+Balanced circulation of people is only possible along cycles on the
+reallocation graph. Simplest possible case is a~request to stay in same
+building $i$ -- a~{\em loop} on the graph. All such requests must be accepted,
+all are possible. The maximum number of possible transfers is thus $t_{ii} = r_{ii}$.
+
+For~a 2-node cycle $i \to j \to i$ (figure~\ref{fig:DRV1T}), the maximum number
+$t_{ij}$ of possible transfers is
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{equation}
   t_{ij} = 2 r_{\min} = 2 \min{(r_{ij}, r_{ji})}.
@@ -131,7 +141,8 @@ possible number of transfers is
 
 In general, the~number of possible transfers along an~isolated
 $K$-node/$K$-edge cycle is a~multiple of~$K$, and has the form
-$t = K r_{\min}$, where $r_{\min}$ is the minimum weight along the path.
+$t = K r_{\min}$, where $r_{\min}$ is the smallest edge multiplicity along the
+path.
 
 %%We guess, that for a~$K$-node cycle $\mathcal{C}$, the maximum possible number
 %%of transfers is
