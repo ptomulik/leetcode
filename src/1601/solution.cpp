@@ -18,8 +18,8 @@
 #include <type_traits>
 #include <vector>
 
-typedef int8_t snum_t;     // signed integer value
-typedef uint8_t unum_t;    // unsigned integer value
+typedef int16_t snum_t;     // signed integer value
+typedef uint16_t unum_t;    // unsigned integer value
 
 constexpr unum_t NMAX = 20; //! Max supported no. nodes in graph.
 constexpr unum_t FMAX = 16; //! Max supported total capacity (sum of arc capacities).
@@ -750,7 +750,7 @@ public:
         }
     }
 };
-
+#include "io.cpp"
 /**
  * The workhorse class.
  */
@@ -806,10 +806,12 @@ public:
 
         // Find and remove minimal path flow.
         find_deficit_and_excess_nodes(graph, deficit, excess, balances);
+        std::cout << "deficit: [" << deficit << "]; excess: [" << excess << "]" << std::endl;
         while (deficit.size() != 0) {
             for (auto ki = deficit.begin(); ki != deficit.end();) {
                 auto k = *ki;
                 _dijkstra.shortest_paths(graph, k, shortest);
+                std::cout << "sortest: " << shortest.i() << " -> " << shortest.distances() << ";" << shortest.predecessors() << std::endl;
                 for (auto li = excess.begin(); li != excess.end();) {
                     auto l = *li;
                     if (shortest.exists(l)) {
