@@ -410,24 +410,24 @@ paths $P_{32}$ and $P_{40}$, both of length $P_{kl} = 1$).
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-One may think, that this is just a matter of selecting the shortest paths
-$P_{kl}$ in appropriate order, e.g. by sorting all the possible paths $P_{kl}:
-(k,l) \in D \times E$ by length (shortest first) and then selecting in
-ascending order. Indeed, it is the matter of the shortest path order, but it's
-hard to propose appropriate sorting criteria (using just the path length
-won't work). It may be, for example, that multiple paths of same length compete
-for certain units of flow, and choosing one over the other may yield different
-results. This is depicted on figure~\ref{fig:CT5N5}. Initially, there are three
-possible paths from deficit to excess nodes, all of length $2$ -- two
-alternative paths from node $3$ to $1$ ($3-0-1$ and $3-4-1$) and one path from
-node $3$ to $2$ ($3-4-2$). Assume that the algorithm selected $P_{31}$, for
-which Dijkstra's algorithm provided $3-4-1$ as shortest path. Using it at
-iteration $\eta=0$ excludes the paths $3-4-2$ and $3-0-1$ from further
-iterations. For next iteration, a~new set of shortest paths is evaluated
-consisting of a single path $3-0-1-2$ of length $3$. After removing its flow,
-we reach graph balance, but the circulation is $z(r^2) = 2$ instead of
-$z(r^{*})=3$ (using paths $P_{31} = 3-0-1$ and then $P_{32} = 3-4-2$ would
-leave the cycle $1-2-4-1$ of length $3$ and circular flow $1$ along the cycle).
+One may think, that this is just a matter of picking the shortest paths
+$P_{kl}$ in appropriate order, e.g. selecting the paths $P_{kl}: (k,l) \in D
+\times E$ sorted by length (shortest first). While the claim ``picking paths in
+appropriate order'' may have sense, determining the ``appropriate order'' is
+hard if not impossible. Sorting the shortest paths by their length would not
+guarantee correctness. It happens, for example, that multiple paths of same
+length compete for certain units of flow, and choosing one over the other may
+yield different results. This is depicted on figure~\ref{fig:CT5N5}. Initially,
+there are three possible paths from deficit to excess nodes, all of length $2$
+-- two alternative paths from node $3$ to $1$ ($3-0-1$ and $3-4-1$) and one
+path from node $3$ to $2$ ($3-4-2$). Assume that the algorithm selected the
+pair $(k,l) = (3,1)$, for which Dijkstra's algorithm provided $P_{31} = 3-4-1$
+as shortest path. Using it at iteration $\eta=0$ excludes the paths $3-4-2$ and
+$3-0-1$ from further iterations. For the next iteration, a~new set of shortest
+paths is evaluated consisting of a single path $3-0-1-2$ of length $3$. After
+removing its flow, we reach network balance, but the circulation is $z(r^2) = 2$
+instead of $z(r^{*})=3$ (using paths $P_{31} = 3-0-1$ and then $P_{32} = 3-4-2$
+would lead to $z(r^2)=3$, a~circular along the single cycle $1-2-4-1$).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[H]
   \centering
@@ -525,17 +525,17 @@ leave the cycle $1-2-4-1$ of length $3$ and circular flow $1$ along the cycle).
 Correctness of the above algorithm may be proved for certain class of networks.
 First, observe that, by definition, the maximum circulation $z(r^{*})$ is
 independent on arcs that do not participate in any cycles -- we can just remove
-these arcs. For the example from figure~\ref{fig:XUM0T}, these are arcs $(3,2)$
-and $(4,0)$. For the example from figure~\ref{fig:CT5N5}, these are arcs
-$(3,0)$, $(0,1)$ and $(3,4)$. In general case, arcs not participating in any
-cycles form so-called bridges between so-called strongly connected
-components\footnote{A directed graph is strongly connected if there is a path
-in each direction between each pair of nodes.}. At high level, we can model any
-directed graph $G$ by its condensation graph in which nodes represent strongly
-connected components (SCCs) found in $G$ and arcs represent bridges between
-SCCs. This condensation graph is always acyclic, so bridges can not participate
-in the circulation. What's left after bridge removal, is a set of isolated SCCs,
-which can be handled as separate networks -- independently.
+these arcs. These are arcs $(3,2)$ and $(4,0)$ on figure~\ref{fig:XUM0T}, or
+arcs $(3,0)$, $(0,1)$, and $(3,4)$ on figure~\ref{fig:CT5N5}. In general, arcs
+not participating in any cycles form so-called bridges between so-called
+strongly connected components\footnote{A directed graph is strongly connected
+if there is a path in each direction between each pair of nodes.}. At a~high
+level we can draw a~condensation graph of $G$, where nodes represent strongly
+connected components (SCCs) found in $G$ and these SCCs are connected by
+bridges. This condensation graph is always acyclic, which means -- bridges
+can not participate in the circulation (the entire circulation is enclosed
+within SCCs). The iteration may therefore be ran on a~set of isolated SCCs
+found in $G$ and the resultant circulation $z(r^{*})$ shall still be valid.
 
 A~directed graph is called strongly connected if there is a~path in each
 direction between each pair of nodes (a~path exist from the first node of the
