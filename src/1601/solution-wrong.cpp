@@ -12,9 +12,9 @@
 
 #include <algorithm>
 #include <cstdint>
-//#include <iostream>
-//#include <iterator>
-//#include <functional>
+#include <iostream>
+#include <iterator>
+#include <functional>
 #include <vector>
 
 typedef int16_t snum_t;     // signed integer value
@@ -23,15 +23,118 @@ typedef uint16_t unum_t;    // unsigned integer value
 constexpr unum_t NMAX = 20; //! Max supported no. nodes in graph.
 constexpr unum_t FMAX = 16; //! Max supported total capacity (sum of arc capacities).
 
-#include "vector.hpp"
-#include "matrix.hpp"
-#include "adjlst.hpp"
+/**
+ * Vector with inplace storage.
+ */
+template<size_t N, typename T> class Vector {
+    size_t _n;
+    T      _vec[N];
+public:
+
+    typedef T value_type;
+
+    constexpr Vector() noexcept: _n(0u) {}
+
+    constexpr size_t size() const noexcept {
+        return _n;
+    }
+
+    constexpr auto&& operator()(this auto&& self, size_t i) noexcept {
+        return self._vec[i];
+    }
+
+    constexpr void reset(size_t n, T const& v = T()) noexcept {
+        resize(n);
+        fill(v);
+    }
+
+    constexpr void resize(size_t n) noexcept {
+        _n = n;
+    }
+
+    constexpr T* erase(T* pos) noexcept {
+        auto const* const e = end();
+        if (pos >= begin() && pos < e) {
+            for (T* ptr = pos; ptr < e; ++ptr) {
+                *ptr = *(ptr + 1);
+            }
+            --_n;
+        }
+        return pos;
+    }
+
+    constexpr void fill(T const& v) noexcept {
+        std::fill_n(&_vec[0], _n, v);
+    }
+
+    constexpr void clear() noexcept {
+        _n = 0;
+    }
+
+    constexpr void push_back(T value) noexcept {
+        _vec[_n++] = value;
+    }
+
+    constexpr T pop_back() noexcept {
+        return _vec[--_n];
+    }
+
+    constexpr auto* begin(this auto&& self) noexcept {
+        return &self._vec[0];
+    }
+
+    constexpr auto* end(this auto&& self) noexcept {
+        return &self._vec[self._n];
+    }
+};
+
+
+/**
+ * Square matrix with inplace storage.
+ */
+template<size_t N, typename T> class Matrix {
+    size_t _n;
+    T      _mat[N][N];
+public:
+    constexpr Matrix() noexcept: _n(0u) { }
+    constexpr Matrix(size_t n) noexcept : _n(n) { }
+    constexpr Matrix(size_t n, T const& x) noexcept : _n(n), _mat{x} { }
+
+    constexpr void reset(size_t n, T const& v = T()) noexcept {
+        resize(n);
+        fill(v);
+    }
+
+    constexpr void resize(size_t n) noexcept {
+        _n = n;
+    }
+
+    constexpr void fill(T const& v) noexcept {
+        std::fill_n(&_mat[0][0], N * N, v);
+    }
+
+    constexpr auto size() const noexcept {
+        return _n;
+    }
+
+    constexpr auto&& operator () (this auto&& self, size_t i, size_t j) noexcept {
+        return self._mat[i][j];
+    }
+
+    // Remove node from graph (node indices and _n remain unchanged!)
+    constexpr void remove(size_t i) noexcept {
+        for (size_t j = 0; j < _n; ++j) {
+            _mat[i][j] = 0;
+            _mat[j][i] = 0;
+        }
+    }
+};
 
 
 /**
  * Flow matrix (a kind of adjacency matrix).
  */
-typedef Matrix<snum_t, NMAX> FlowMat;
+typedef Matrix<NMAX, snum_t> FlowMat;
 
 /**
  * Sorted sequence of numbers.
@@ -385,7 +488,7 @@ public:
     }
 
     template<size_t N, typename T>
-    constexpr void remove(Vector<T, N> const& nodes) noexcept {
+    constexpr void remove(Vector<N, T> const& nodes) noexcept {
         for (auto i: nodes) {
             remove(i);
         }
@@ -401,7 +504,7 @@ public:
     }
 
     template<size_t N, typename T>
-    constexpr void disconnect(Vector<T, N> const& arcs) noexcept {
+    constexpr void disconnect(Vector<N, T> const& arcs) noexcept {
         for (auto arc: arcs) {
             disconnect(arc);
         }
@@ -453,8 +556,8 @@ public:
  */
 class ShortestPaths {
 public:
-    typedef Vector<unum_t, NMAX> Distances;
-    typedef Vector<snum_t, NMAX> Predecessors;
+    typedef Vector<NMAX, unum_t> Distances;
+    typedef Vector<NMAX, snum_t> Predecessors;
 
 private:
     size_t       _i;
@@ -533,7 +636,7 @@ public:
  * Dijkstra shortest path with Dial modification (bucket).
  */
 class Dijkstra {
-    mutable Vector<Vector<unum_t, NMAX>, NMAX> _bucket;
+    mutable Vector<NMAX, Vector<NMAX, unum_t>> _bucket;
 
 public:
     constexpr void shortest_paths(Graph const& graph, size_t s, ShortestPaths& paths) const noexcept {
@@ -570,176 +673,176 @@ public:
  * Tarjan's algorithm -- identifies strongly connected components in graph
  * (actually, we identify only bridges between them).
  */
-//class Tarjan {
-//public:
-//    typedef Vector<bool, NMAX> BoolVec;
-//    typedef Vector<snum_t, NMAX> SnumVec;
-//    typedef Vector<unum_t, NMAX> NodeStack;
-//private:
-//    mutable BoolVec _onstack;
-//    mutable SnumVec _low;
-//    mutable SnumVec _tin;
-//    mutable unum_t  _timer;
-//    mutable NodeStack _stack;
-//
-//    template<typename BridgeFunc>
-//    constexpr void _bridges_dfs(
-//        Graph const& graph,
-//        BridgeFunc bridge,
-//        snum_t i,
-//        snum_t p = -1
-//    ) const noexcept {
-//        _tin(i) = _low(i) = _timer++;
-//
-//        _stack.push_back(i);
-//        _onstack(i) = true;
-//
-//        for (auto j: graph.outbound(i)) {
-//            if (_tin(j) == -1) {
-//                // Successor j has not yet been visited. Recurse on it.
-//                _bridges_dfs(graph, bridge, j, i);
-//                _low(i) = std::min(_low(i), _low(j));
-//            } else if (_onstack(j)) {
-//                // Successor j is on stack and hence in the current SCC.
-//                _low(i) = std::min(_low(i), _tin(j));
-//            } else {
-//                // If j is not on stack, then (i, j) is an arc pointing to an
-//                // SCC already found, and must be ignored. See below, regarding
-//                // the next line.
-//                bridge(Pair(i, j));
-//            }
-//        }
-//
-//        // If i is a root node, pop the stack and generate an SCC.
-//        if (_low(i) == _tin(i)) {
-//            if (-1 != p) {
-//                bridge(Pair(p, i));
-//            }
-//            snum_t j;
-//            do {
-//                j = _stack.pop_back();
-//                _onstack(j) = false;
-//            } while(i != j);
-//        }
-//    }
-//
-//    constexpr void _dfs_init(size_t n) const noexcept {
-//        _stack.clear();
-//
-//        _onstack.reset(n, false);
-//        _tin.reset(n, -1);
-//        _low.reset(n, -1);
-//
-//        _timer = 0;
-//    }
-//
-//public:
-//    //! Identifies bridges between strongly connected components in graph.
-//    template<typename BridgeFunc>
-//    constexpr void bridges(Graph const& graph, BridgeFunc bridge) const noexcept {
-//        _dfs_init(graph.size());
-//
-//        for (auto i: graph.nodes()) {
-//            if (-1 == _tin(i)) {
-//                _bridges_dfs(graph, bridge, i);
-//            }
-//        }
-//    }
-//};
-//#include "io.cpp"
+class Tarjan {
+public:
+    typedef Vector<NMAX, bool> BoolVec;
+    typedef Vector<NMAX, snum_t> SnumVec;
+    typedef Vector<NMAX, unum_t> NodeStack;
+private:
+    mutable BoolVec _onstack;
+    mutable SnumVec _low;
+    mutable SnumVec _tin;
+    mutable unum_t  _timer;
+    mutable NodeStack _stack;
+
+    template<typename BridgeFunc>
+    constexpr void _bridges_dfs(
+        Graph const& graph,
+        BridgeFunc bridge,
+        snum_t i,
+        snum_t p = -1
+    ) const noexcept {
+        _tin(i) = _low(i) = _timer++;
+
+        _stack.push_back(i);
+        _onstack(i) = true;
+
+        for (auto j: graph.outbound(i)) {
+            if (_tin(j) == -1) {
+                // Successor j has not yet been visited. Recurse on it.
+                _bridges_dfs(graph, bridge, j, i);
+                _low(i) = std::min(_low(i), _low(j));
+            } else if (_onstack(j)) {
+                // Successor j is on stack and hence in the current SCC.
+                _low(i) = std::min(_low(i), _tin(j));
+            } else {
+                // If j is not on stack, then (i, j) is an arc pointing to an
+                // SCC already found, and must be ignored. See below, regarding
+                // the next line.
+                bridge(Pair(i, j));
+            }
+        }
+
+        // If i is a root node, pop the stack and generate an SCC.
+        if (_low(i) == _tin(i)) {
+            if (-1 != p) {
+                bridge(Pair(p, i));
+            }
+            snum_t j;
+            do {
+                j = _stack.pop_back();
+                _onstack(j) = false;
+            } while(i != j);
+        }
+    }
+
+    constexpr void _dfs_init(size_t n) const noexcept {
+        _stack.clear();
+
+        _onstack.reset(n, false);
+        _tin.reset(n, -1);
+        _low.reset(n, -1);
+
+        _timer = 0;
+    }
+
+public:
+    //! Identifies bridges between strongly connected components in graph.
+    template<typename BridgeFunc>
+    constexpr void bridges(Graph const& graph, BridgeFunc bridge) const noexcept {
+        _dfs_init(graph.size());
+
+        for (auto i: graph.nodes()) {
+            if (-1 == _tin(i)) {
+                _bridges_dfs(graph, bridge, i);
+            }
+        }
+    }
+};
+#include "io.cpp"
 /**
  * The workhorse class.
  */
-//class Optimizer {
-//public:
-//    typedef Vector<unum_t, NMAX> NodeVec;
-//    typedef Vector<snum_t, NMAX> SnumVec;
-//    typedef Vector<Pair, NMAX>   PairVec;
-//private:
-//    mutable NodeVec _nodes1;            //! Vector 1 holding nodes.
-//    mutable NodeVec _nodes2;            //! Vector 2 holding nodes.
-//    mutable SnumVec _snums1;            //! Vector holding signed integers
-//    mutable PairVec _pairs1;            //! Vector holding node pairs.
-//    mutable ShortestPaths _shortest1;   //! Structure of shortest paths
-//    Dijkstra _dijkstra;
-//    Tarjan _tarjan;
-//public:
-//
-//    constexpr void find_deficit_and_excess_nodes(
-//        Graph const& graph,
-//        NodeVec& deficit,
-//        NodeVec& excess,
-//        SnumVec& balances
-//    ) const noexcept {
-//        deficit.clear();
-//        excess.clear();
-//        balances.reset(graph.size(), 0);
-//        for (auto i: graph.nodes()) {
-//            auto e = graph.balance(i);
-//            balances(i) = e;
-//            if (e < 0) {
-//                deficit.push_back(i);
-//            } else if (e > 0) {
-//                excess.push_back(i);
-//            }
-//        }
-//    }
-//
-//    constexpr void remove_bridges(Graph& graph) const noexcept {
-//        auto& bridges = _pairs1;
-//        bridges.clear();
-//        _tarjan.bridges(graph, [&bridges](Pair const& bridge) {
-//            bridges.push_back(bridge);
-//        });
-//        graph.disconnect(bridges);
-//    }
-//
-//    constexpr unum_t max_circulation(Graph& graph) const noexcept {
-//        NodeVec& deficit = _nodes1;
-//        NodeVec& excess = _nodes2;
-//        SnumVec& balances = _snums1;
-//        ShortestPaths& shortest = _shortest1;
-//
-//        // Find and remove minimal path flow.
-//        find_deficit_and_excess_nodes(graph, deficit, excess, balances);
-////        std::cout << "deficit: [" << deficit << "]; excess: [" << excess << "]" << std::endl;
-//        while (deficit.size() != 0) {
-//            for (auto ki = deficit.begin(); ki != deficit.end();) {
-//                auto k = *ki;
-//                _dijkstra.shortest_paths(graph, k, shortest);
-////                std::cout << "sortest: " << shortest.i() << " -> " << shortest.distances() << ";" << shortest.predecessors() << std::endl;
-//                for (auto li = excess.begin(); li != excess.end();) {
-//                    auto l = *li;
-//                    if (shortest.exists(l)) {
-//                        // Flow f(P_{kl}) along the path P_{kl}
-//                        unum_t f = std::min(std::min((snum_t)-balances(k), balances(l)), shortest.flow(l, graph));
-//                        shortest.walk(l, [&graph, f](size_t i, size_t j) { graph.sub(i, j, f); });
-//                        balances(k) += f;
-//                        balances(l) -= f;
-//                        if (0 == balances(k)) {
-//                            break;
-//                        }
-//                    }
-//                    li = (0 == balances(l)) ? excess.erase(li) : li + 1;
-//                }
-//                ki = (0 == balances(k)) ? deficit.erase(ki) : ki + 1;
-//            }
-//        }
-//
-//        return flow_cost(graph);
-//    }
-//
-//    constexpr unum_t flow_cost(Graph const& graph) const noexcept {
-//        unum_t total = 0;
-//        for (auto const& ref: graph.outbound()) {
-//            auto i = ref.i();
-//            for (auto j: ref.list()) {
-//                total += graph.flow(i, j);
-//            }
-//        }
-//        return total;
-//    }
-//};
+class Optimizer {
+public:
+    typedef Vector<NMAX, unum_t> NodeVec;
+    typedef Vector<NMAX, snum_t> SnumVec;
+    typedef Vector<NMAX, Pair>   PairVec;
+private:
+    mutable NodeVec _nodes1;            //! Vector 1 holding nodes.
+    mutable NodeVec _nodes2;            //! Vector 2 holding nodes.
+    mutable SnumVec _snums1;            //! Vector holding signed integers
+    mutable PairVec _pairs1;            //! Vector holding node pairs.
+    mutable ShortestPaths _shortest1;   //! Structure of shortest paths
+    Dijkstra _dijkstra;
+    Tarjan _tarjan;
+public:
+
+    constexpr void find_deficit_and_excess_nodes(
+        Graph const& graph,
+        NodeVec& deficit,
+        NodeVec& excess,
+        SnumVec& balances
+    ) const noexcept {
+        deficit.clear();
+        excess.clear();
+        balances.reset(graph.size(), 0);
+        for (auto i: graph.nodes()) {
+            auto e = graph.balance(i);
+            balances(i) = e;
+            if (e < 0) {
+                deficit.push_back(i);
+            } else if (e > 0) {
+                excess.push_back(i);
+            }
+        }
+    }
+
+    constexpr void remove_bridges(Graph& graph) const noexcept {
+        auto& bridges = _pairs1;
+        bridges.clear();
+        _tarjan.bridges(graph, [&bridges](Pair const& bridge) {
+            bridges.push_back(bridge);
+        });
+        graph.disconnect(bridges);
+    }
+
+    constexpr unum_t max_circulation(Graph& graph) const noexcept {
+        NodeVec& deficit = _nodes1;
+        NodeVec& excess = _nodes2;
+        SnumVec& balances = _snums1;
+        ShortestPaths& shortest = _shortest1;
+
+        // Find and remove minimal path flow.
+        find_deficit_and_excess_nodes(graph, deficit, excess, balances);
+//        std::cout << "deficit: [" << deficit << "]; excess: [" << excess << "]" << std::endl;
+        while (deficit.size() != 0) {
+            for (auto ki = deficit.begin(); ki != deficit.end();) {
+                auto k = *ki;
+                _dijkstra.shortest_paths(graph, k, shortest);
+//                std::cout << "sortest: " << shortest.i() << " -> " << shortest.distances() << ";" << shortest.predecessors() << std::endl;
+                for (auto li = excess.begin(); li != excess.end();) {
+                    auto l = *li;
+                    if (shortest.exists(l)) {
+                        // Flow f(P_{kl}) along the path P_{kl}
+                        unum_t f = std::min(std::min((snum_t)-balances(k), balances(l)), shortest.flow(l, graph));
+                        shortest.walk(l, [&graph, f](size_t i, size_t j) { graph.sub(i, j, f); });
+                        balances(k) += f;
+                        balances(l) -= f;
+                        if (0 == balances(k)) {
+                            break;
+                        }
+                    }
+                    li = (0 == balances(l)) ? excess.erase(li) : li + 1;
+                }
+                ki = (0 == balances(k)) ? deficit.erase(ki) : ki + 1;
+            }
+        }
+
+        return flow_cost(graph);
+    }
+
+    constexpr unum_t flow_cost(Graph const& graph) const noexcept {
+        unum_t total = 0;
+        for (auto const& ref: graph.outbound()) {
+            auto i = ref.i();
+            for (auto j: ref.list()) {
+                total += graph.flow(i, j);
+            }
+        }
+        return total;
+    }
+};
 
 class Solution {
     auto _setup_graph(int n, std::vector<std::vector<int>> const& requests) {
@@ -756,19 +859,18 @@ class Solution {
             }
         }
 
-//        // Bridges do not contribute, and fool our opimizer.
-//        optimizer.remove_bridges(graph);
+        // Bridges do not contribute, and fool our opimizer.
+        optimizer.remove_bridges(graph);
 
         return loops;
     }
 
 public:
     Graph graph;
-//    Optimizer optimizer;
+    Optimizer optimizer;
 
     int maximumRequests(int n, std::vector<std::vector<int>> const& requests) {
-//        unum_t loops = _setup_graph(n, requests);
-//        return loops + optimizer.max_circulation(graph);
-        return 0;
+        unum_t loops = _setup_graph(n, requests);
+        return loops + optimizer.max_circulation(graph);
     }
 };

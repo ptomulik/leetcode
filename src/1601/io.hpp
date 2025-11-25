@@ -1,9 +1,9 @@
-#ifndef LC_1601_IO_CPP
-#define LC_1601_IO_CPP
+#ifndef LC_1601_IO_HPP
+#define LC_1601_IO_HPP
 
 #include <ostream>
 
-constexpr const char* sep(unum_t i, const char* s2 = ", ", const char *s1 = "") {
+constexpr const char* sep(size_t i, const char* s2 = ", ", const char *s1 = "") {
     return 0 == i ? s1 : s2;
 }
 
@@ -17,8 +17,8 @@ std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>&
     return os;
 }
 
-template<typename CharT, class Traits, size_t N, typename T>
-std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Vector<N, T> const& vector) {
+template<typename CharT, class Traits, typename T, size_t N>
+std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Vector<T, N> const& vector) {
     os << "[";
     for(size_t i = 0; i < vector.size(); i++) {
         os << sep(i) << vector(i);
@@ -28,10 +28,10 @@ std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>&
 }
 
 template<typename CharT, class Traits, size_t N, typename T>
-std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Matrix<N, T> const& matrix) {
-    for(unum_t i = 0; i < matrix.size(); i++) {
+std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Matrix<T, N> const& matrix) {
+    for(size_t i = 0; i < matrix.size(); i++) {
         os << "[";
-        for (unum_t j = 0; j < matrix.size(); j++) {
+        for (size_t j = 0; j < matrix.size(); j++) {
             os << sep(j) << matrix(i, j);
         }
         os << "]" << std::endl;
@@ -41,15 +41,15 @@ std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>&
 
 template <typename CharT, class Traits, size_t N>
 std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, NodeSeq<N> const& nodes) {
-    for(unum_t k = 0; k < nodes.size(); ++k) {
-        std::cout << sep(k) << nodes(k);
+    for(size_t k = 0; k < nodes.size(); ++k) {
+        os << sep(k) << nodes(k);
     }
     return os;
 }
 
 template<typename CharT, class Traits>
 std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, AdjLst const& list) {
-    unum_t k = 0;
+    size_t k = 0;
     for (auto const& ref: list) {
         os << sep(k++, "\n") << ref.i() << " -> {" <<  ref.list() << "}";
     }
@@ -85,4 +85,4 @@ std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>
     return os;
 }
 
-#endif /* LC_1601_IO_CPP */
+#endif /* LC_1601_IO_HPP */
