@@ -6,7 +6,7 @@
 // URL:     https://leetcode.com/problems/maximum-number-of-achievable-transfer-requests/description/
 //
 // STATUS:      Accepted
-// SUBMISSION: https://leetcode.com/problems/maximum-number-of-achievable-transfer-requests/submissions/1836052186/
+// SUBMISSION:  https://leetcode.com/problems/maximum-number-of-achievable-transfer-requests/submissions/1836052186/
 // RUNTIME:     0ms | Beats 100.00%
 // MEMORY:      11.35 MB | Beats 99.39%
 
@@ -797,14 +797,8 @@ typedef typename std::make_signed<unum_t>::type snum_t; // signed integer value
 constexpr unum_t NMAX = 20; //! Max supported no. nodes in graph.
 constexpr unum_t FMAX = 16; //! Max supported total capacity (sum of arc capacities).
 
-typedef Templates::Graph<unum_t,NMAX,2> Graph;
+typedef Templates::Graph<unum_t, NMAX, 2> Graph;
 typedef typename Graph::edge_type Edge;
-
-typedef typename Edge::endpoint_type Endpoint;
-typedef typename Edge::head_type Head;
-typedef typename Edge::tail_type Tail;
-
-typedef Templates::AdjLst<Edge,NMAX> AdjLst;
 
 /**
  * Encapsulates shortest paths solution.
@@ -1008,41 +1002,48 @@ typedef Templates::AdjLst<Edge,NMAX> AdjLst;
 /**
  * The workhorse class.
  */
-//class Optimizer {
-//public:
-//    typedef Vector<unum_t, NMAX> NodeVec;
-//    typedef Vector<snum_t, NMAX> SnumVec;
-//    typedef Vector<Pair, NMAX>   PairVec;
-//private:
-//    mutable NodeVec _nodes1;            //! Vector 1 holding nodes.
-//    mutable NodeVec _nodes2;            //! Vector 2 holding nodes.
-//    mutable SnumVec _snums1;            //! Vector holding signed integers
+class Optimizer {
+public:
+    typedef typename Graph::noode_type node_type;
+    typedef Vector<node_type, NMAX> NodeVec;
+    typedef Vector<snum_t, NMAX> SnumVec;
+    typedef Vector<unum_t, NMAX> UnumVec;
+    typedef UnumVec DistVec;
+    typedef SnumVec PredVec;
+private:
+    mutable NodeVec _nodes1;            //! Vector 1 holding nodes.
+    mutable NodeVec _nodes2;            //! Vector 2 holding nodes.
+    mutable SnumVec _snums1;            //! Vector holding signed integers
+    mutable DistVec _dist1;             //! Vector of distances for shortest paths
+    mutable PredVec _pred1;             //! Vector of predecessors for shortest paths
 //    mutable PairVec _pairs1;            //! Vector holding node pairs.
 //    mutable ShortestPaths _shortest1;   //! Structure of shortest paths
+    mutable Vector<UnumVec, NMAX> _bucket;
+
 //    Dijkstra _dijkstra;
 //    Tarjan _tarjan;
-//public:
-//
-//    constexpr void find_deficit_and_excess_nodes(
-//        Graph const& graph,
-//        NodeVec& deficit,
-//        NodeVec& excess,
-//        SnumVec& balances
-//    ) const noexcept {
-//        deficit.clear();
-//        excess.clear();
-//        balances.reset(graph.size(), 0);
-//        for (auto i: graph.nodes()) {
-//            auto e = graph.balance(i);
-//            balances(i) = e;
-//            if (e < 0) {
-//                deficit.push_back(i);
-//            } else if (e > 0) {
-//                excess.push_back(i);
-//            }
-//        }
-//    }
-//
+public:
+
+    constexpr void find_deficit_and_excess_nodes(
+        Graph const& graph,
+        NodeVec& deficit,
+        NodeVec& excess,
+        SnumVec& balances
+    ) const noexcept {
+        deficit.clear();
+        excess.clear();
+        balances.reset(graph.size(), 0);
+        for (auto i: graph.nodes()) {
+            auto e = graph.balance(i);
+            balances(i) = e;
+            if (e < 0) {
+                deficit.push_back(i);
+            } else if (e > 0) {
+                excess.push_back(i);
+            }
+        }
+    }
+
 //    constexpr void remove_bridges(Graph& graph) const noexcept {
 //        auto& bridges = _pairs1;
 //        bridges.clear();
@@ -1051,7 +1052,39 @@ typedef Templates::AdjLst<Edge,NMAX> AdjLst;
 //        });
 //        graph.disconnect(bridges);
 //    }
+
+//    constexpr void shortest_paths(Graph const& graph, size_t s, DistVec& dist, PredVec& pred) const noexcept {
+//        constexpr const auto dist_max = std::numeric_limits<typename DistVec::value_type>::max()
+//        dist.reset(graph.size(), dist_max);
+//        pred.reset(graph.size(), -1);
 //
+//        _bucket.reset(graph.size());
+//
+//        dist(s) = 0;
+//        _bucket(0).push_back(s);
+//
+//        auto first_nonempty = [](auto& container) {
+//            return std::find_if(container.begin(), container.end(), [](auto const& d) {
+//                return d.size() > 0;
+//            });
+//        };
+//
+//        for (auto stack = first_nonempty(_bucket); stack != _bucket.end(); stack = first_nonempty(_bucket)) {
+//            unum_t i = stack->pop_back();
+//
+//            unum_t dist = dist(i) + 1;
+//
+//            for (auto h: graph.outbound(i)) {
+//
+//                if (dist < dist(j)) {
+//                    _bucket(dist).push_back(j);
+//                    dist(j) = dist;
+//                    pred(j) = i;
+//                }
+//            }
+//        }
+//    }
+
 //    constexpr unum_t max_circulation(Graph& graph) const noexcept {
 //        NodeVec& deficit = _nodes1;
 //        NodeVec& excess = _nodes2;
@@ -1086,18 +1119,18 @@ typedef Templates::AdjLst<Edge,NMAX> AdjLst;
 //
 //        return flow_cost(graph);
 //    }
-//
-//    constexpr unum_t flow_cost(Graph const& graph) const noexcept {
-//        unum_t total = 0;
-//        for (auto const& ref: graph.outbound()) {
-//            auto i = ref.i();
-//            for (auto j: ref.list()) {
-//                total += graph.flow(i, j);
-//            }
-//        }
-//        return total;
-//    }
-//};
+
+    constexpr unum_t flow_cost(Graph const& graph) const noexcept {
+        unum_t total = 0;
+        for (auto const& ref: graph.outbound()) {
+            auto i = ref.i();
+            for (auto h: ref.list()) {
+                total += graph.flow({i, h.i, h.m});
+            }
+        }
+        return total;
+    }
+};
 
 class Solution {
     auto _setup_graph(int n, std::vector<std::vector<int>> const& requests) {
@@ -1123,7 +1156,7 @@ class Solution {
 
 public:
     Graph graph;
-//    Optimizer optimizer;
+    Optimizer optimizer;
 
     int maximumRequests(int n, std::vector<std::vector<int>> const& requests) {
         unum_t loops = _setup_graph(n, requests);
