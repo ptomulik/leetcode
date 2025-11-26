@@ -13,14 +13,783 @@
 #ifndef LC_1601_SOLUTION_HPP
 #define LC_1601_SOLUTION_HPP
 
-#include "edge.hpp"
-#include "adjlst.hpp"
-#include "graph.hpp"
-
+#include <algorithm>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <numbers>
 #include <type_traits>
 #include <vector>
+
+namespace Templates {
+
+/**
+ * Vector of size N with inplace storage.
+ */
+template <typename T, size_t N>
+class Vector {
+    size_t _n;
+    T      _vec[N];
+public:
+
+    typedef T value_type;
+
+    constexpr Vector() noexcept: _n(0u) {}
+
+    constexpr size_t size() const noexcept {
+        return _n;
+    }
+
+    constexpr auto&& operator()(this auto&& self, size_t i) noexcept {
+        return self._vec[i];
+    }
+
+    constexpr void reset(size_t n, T const& v = T()) noexcept {
+        resize(n);
+        fill(v);
+    }
+
+    constexpr void resize(size_t n) noexcept {
+        _n = n;
+    }
+
+    constexpr T* erase(T* pos) noexcept {
+        auto const* const e = end();
+        if (pos >= begin() && pos < e) {
+            for (T* ptr = pos; ptr < e; ++ptr) {
+                *ptr = *(ptr + 1);
+            }
+            --_n;
+        }
+        return pos;
+    }
+
+    constexpr void fill(T const& v) noexcept {
+        std::fill_n(&_vec[0], _n, v);
+    }
+
+    constexpr void clear() noexcept {
+        _n = 0;
+    }
+
+    constexpr void push_back(T value) noexcept {
+        _vec[_n++] = value;
+    }
+
+    constexpr T pop_back() noexcept {
+        return _vec[--_n];
+    }
+
+    constexpr auto* begin(this auto&& self) noexcept {
+        return &self._vec[0];
+    }
+
+    constexpr auto* end(this auto&& self) noexcept {
+        return &self._vec[self._n];
+    }
+};
+
+/**
+ * Square NxN matrix with inplace storage.
+ */
+template <typename T, size_t N>
+class Matrix {
+    size_t _n;
+    T      _mat[N][N];
+public:
+    constexpr Matrix() noexcept: _n(0u) { }
+    constexpr Matrix(size_t n) noexcept : _n(n) { }
+    constexpr Matrix(size_t n, T const& x) noexcept : _n(n), _mat{x} { }
+
+    constexpr void reset(size_t n, T const& v = T()) noexcept {
+        resize(n);
+        fill(v);
+    }
+
+    constexpr void resize(size_t n) noexcept {
+        _n = n;
+    }
+
+    constexpr void fill(T const& v) noexcept {
+        std::fill_n(&_mat[0][0], N * N, v);
+    }
+
+    constexpr auto size() const noexcept {
+        return _n;
+    }
+
+    constexpr auto&& operator () (this auto&& self, size_t i, size_t j) noexcept {
+        return self._mat[i][j];
+    }
+
+    // Set value to all elements of row and column i.
+    constexpr void set(size_t i, T const& v) noexcept {
+        for (size_t j = 0; j < _n; ++j) {
+            _mat[i][j] = v;
+            _mat[j][i] = v;
+        }
+    }
+};
+
+/**
+ * Sorted sequence of numbers.
+ */
+template <typename T, size_t N>
+class SortSeq {
+public:
+    typedef T value_type;
+    typedef T* iterator;
+    typedef T const* const_iterator;
+    typedef T& reference;
+    typedef T const& const_reference;
+private:
+    size_t _n;
+    T _seq[N];
+
+    constexpr ptrdiff_t _insertion_index(T v) const noexcept {
+        if (0 == _n) {
+            return 0;
+        }
+
+        if (v < _seq[0]) {
+            return 0;
+        }
+
+        if (v > _seq[_n-1]) {
+            return _n;
+        }
+
+        T lo = 0, hi = _n-1;
+        // Find the index using bisection
+        for (auto mid = (hi + lo)/2; (hi - lo) > 1; mid = (lo + hi)/2) {
+            if (v < _seq[mid]) {
+                hi = mid;
+            } else if (v > _seq[mid]) {
+                lo = mid;
+            } else {
+                return -1; // already exists
+            }
+        }
+
+        if (v == _seq[lo] || v == _seq[hi]) {
+            return -1;
+        }
+
+        return hi;
+    }
+
+    constexpr ptrdiff_t _removal_index(T v) const noexcept {
+        if (0 == _n) {
+            return -1;
+        }
+
+        if (v < _seq[0] || v > _seq[_n-1]) {
+            return -1;
+        }
+
+        T lo = 0, hi = _n-1;
+        // Find the index using bisection
+        for (auto mid = (hi + lo)/2; (hi - lo) > 1; mid = (lo + hi)/2) {
+            if (v < _seq[mid]) {
+                hi = mid;
+            } else if (v > _seq[mid]){
+                lo = mid;
+            } else {
+                return mid; // found
+            }
+        }
+
+        if (v == _seq[lo]) {
+            return lo;
+        }
+
+        if (v == _seq[hi]) {
+            return hi;
+        }
+
+        return -1;
+    }
+
+    constexpr void _unshift(T v, size_t at = 0) noexcept {
+        for (auto j = _n; j > at; --j) {
+            _seq[j] = _seq[j-1];
+        }
+        _seq[at] = v;
+        ++_n;
+    }
+
+    constexpr auto _shift(size_t at = 0) noexcept {
+        auto v = _seq[at];
+
+        for (T j = at + 1; j < _n; ++j) {
+            _seq[j-1] = _seq[j];
+        }
+        --_n;
+
+        return v;
+    }
+
+public:
+    constexpr SortSeq() noexcept: _n(0) {}
+
+    constexpr auto size() const noexcept {
+        return _n;
+    }
+
+    constexpr void reset() noexcept {
+        _n = 0;
+    }
+
+    constexpr auto operator() (size_t k) const noexcept {
+        return _seq[k];
+    }
+
+    constexpr void insert(T v) noexcept {
+        auto const at = _insertion_index(v);
+        if (-1 != at) {
+            _unshift(v, at);
+        }
+    }
+
+    constexpr void remove(T v) noexcept {
+        auto const at = _removal_index(v);
+        if (-1 != at) {
+            _shift(at);
+        }
+    }
+
+    constexpr auto* begin(this auto&& self) noexcept {
+        return &self._seq[0];
+    }
+
+    constexpr auto* end(this auto&& self) noexcept {
+        return &self._seq[self._n];
+    }
+};
+
+/**
+ * Edge endpoint.
+ *
+ * Encapsulates node index i of node at endpoint and number m (multi-graph).
+ */
+template<typename T, size_t M>
+struct Endpoint {
+    typedef T value_type;
+
+    T i;
+    T m;
+
+    constexpr Endpoint(T encoded) noexcept : i(encoded / M), m(encoded % M) {}
+    constexpr Endpoint(T i, T m) noexcept : i(i), m(m) {}
+
+    constexpr T encoded() const noexcept {
+        return M * i + m;
+    }
+};
+
+template <size_t M, typename T>
+constexpr auto make_endpoint(T i, T m) noexcept {
+    return Endpoint<T, M>(i, m);
+}
+
+template <size_t M, typename T>
+constexpr auto make_endpoint(T encoded) noexcept {
+    return Endpoint<T, M>(encoded);
+}
+
+template<typename T, size_t M>
+struct Edge {
+    constexpr static const size_t max_m = M;
+
+    typedef T value_type;
+    typedef Endpoint<T, M> endpoint_type;
+    typedef endpoint_type tail_type;
+    typedef endpoint_type head_type;
+
+    T i;
+    T j;
+    T m;
+
+    constexpr Edge(T i, T j, T m) noexcept : i(i), j(j), m(m) {}
+    constexpr Edge(T i, head_type h) noexcept : i(i), j(h.i), m(h.m) {}
+    constexpr Edge(tail_type t, T j) noexcept : i(t.i), j(j), m(t.m) {}
+
+    constexpr auto tail() const noexcept {
+        return tail_type(i, m);
+    }
+
+    constexpr auto head() const noexcept {
+        return head_type(j, m);
+    }
+
+    constexpr auto reversed() const noexcept {
+        return Edge<T, M>(j, i, m);
+    }
+};
+
+template <size_t M, typename T>
+constexpr auto make_edge(T i, T j, T m) noexcept {
+    return Edge<T, M>(i, j, m);
+}
+
+template <size_t M, typename T>
+constexpr auto make_edge(T i, Endpoint<T, M> head) noexcept {
+    return Endpoint<T, M>(i, head);
+}
+
+template <size_t M, typename T>
+constexpr auto make_edge(Endpoint<T, M> tail, T j) noexcept {
+    return Endpoint<T, M>(tail, j);
+}
+
+/**
+ * Endpoint value reference.
+ */
+template <typename ObjectT>
+class EncodedObjectRef {
+public:
+    typedef typename std::remove_cv<ObjectT>::type object_type;
+    typedef typename std::remove_cv<ObjectT>::type value_type;
+    typedef typename ObjectT::value_type encoded_type;
+    typedef typename std::conditional<
+        std::is_const<ObjectT>::value,
+        typename std::add_const<encoded_type>::type,
+        encoded_type
+    >::type& encoded_reference;
+private:
+    encoded_reference _ref;
+public:
+    constexpr EncodedObjectRef(encoded_reference ref) noexcept : _ref(ref) {}
+
+    constexpr auto const& operator= (object_type obj) const noexcept {
+        _ref = obj.encoded();
+        return *this;
+    }
+
+    constexpr operator value_type() const noexcept {
+        return value_type(_ref);
+    }
+
+    constexpr encoded_type encoded() const noexcept {
+        return _ref;
+    }
+};
+
+template <typename ObjectT>
+class EncodedObjectIter {
+public:
+    typedef typename std::remove_cv<ObjectT>::type object_type;
+    typedef typename std::remove_cv<ObjectT>::type value_type;
+    typedef typename ObjectT::value_type encoded_type;
+    typedef typename std::conditional<
+        std::is_const<ObjectT>::value,
+        typename std::add_const<encoded_type>::type,
+        typename std::remove_const<encoded_type>::type
+    >::type* encoded_pointer;
+    typedef EncodedObjectIter<ObjectT> iterator;
+    typedef EncodedObjectRef<ObjectT> reference;
+private:
+    encoded_pointer _ptr;
+public:
+    constexpr EncodedObjectIter(encoded_pointer ptr) noexcept : _ptr(ptr) {}
+
+    constexpr reference operator*() const noexcept {
+        return reference(*_ptr);
+    }
+
+    constexpr void operator++() noexcept { ++_ptr; }
+    constexpr void operator--() noexcept { --_ptr; }
+
+    template<class TOther>
+    constexpr bool operator == (const TOther& other) const noexcept {
+        return _ptr == other._ptr;
+    }
+
+    template<class TOther>
+    constexpr bool operator != (const TOther& other) const noexcept {
+        return !(*this == other);
+    }
+};
+
+template <typename ObjectT, size_t N>
+class EncodedObjectSortSeq
+{
+public:
+    typedef ObjectT object_type;
+    typedef ObjectT value_type;
+    typedef typename ObjectT::value_type encoded_type;
+    typedef SortSeq<encoded_type, N> sequence_type;
+    typedef EncodedObjectIter<object_type> iterator;
+    typedef EncodedObjectIter<const object_type> const_iterator;
+    typedef EncodedObjectRef<object_type> reference;
+    typedef EncodedObjectRef<const object_type> const_reference;
+private:
+    sequence_type _seq;
+public:
+    constexpr auto size() const noexcept {
+        return _seq.size();
+    }
+
+    constexpr void reset() noexcept {
+        _seq.reset();
+    }
+
+    constexpr auto operator() (size_t k) const noexcept {
+        return _seq(k);
+    }
+
+    constexpr void insert(object_type obj) noexcept {
+        _seq.insert(obj.encoded());
+    }
+
+    constexpr void remove(object_type obj) noexcept {
+        _seq.remove(obj.encoded());
+    }
+
+    constexpr auto begin() noexcept {
+        return iterator(_seq.begin());
+    }
+
+    constexpr auto begin() const noexcept {
+        return const_iterator(_seq.begin());
+    }
+
+    constexpr auto end() noexcept {
+        return iterator(_seq.end());
+    }
+
+    constexpr auto end() const noexcept {
+        return const_iterator(_seq.end());
+    }
+};
+
+template <typename T, typename HeadLstT>
+class AdjLstRef {
+public:
+    typedef T node_type;
+    typedef HeadLstT head_list_type;
+private:
+    node_type _i;
+    head_list_type& _list;
+public:
+    constexpr AdjLstRef(node_type i, head_list_type& list) noexcept
+        : _i(i), _list(list) {
+    }
+
+    constexpr auto i() const noexcept {
+        return _i;
+    }
+
+    constexpr head_list_type& list() const noexcept {
+        return _list;
+    }
+};
+
+template <typename NodeLstT, typename HeadLstT>
+class AdjLstIter {
+public:
+    typedef NodeLstT node_list_type;
+    typedef HeadLstT head_list_type;
+    typedef typename NodeLstT::value_type node_type;
+    typedef typename HeadLstT::value_type head_type;
+    typedef AdjLstRef<node_type, head_list_type> reference;
+private:
+    node_list_type& _nodes;
+    head_list_type* _lists;
+    size_t _k;
+public:
+    constexpr AdjLstIter(node_list_type& nodes, head_list_type* lists, size_t k) noexcept
+        : _nodes(nodes), _lists(lists), _k(k) {
+    }
+
+    constexpr void operator++() noexcept { ++_k; }
+    constexpr void operator--() noexcept { --_k; }
+
+    template<class TOther>
+    constexpr bool operator == (const TOther& other) const noexcept {
+        return _lists == other._lists && &_nodes == &other._nodes && _k == other._k;
+    }
+
+    template<class TOther>
+    constexpr bool operator != (const TOther& other) const noexcept {
+        return !(*this == other);
+    }
+
+    constexpr auto operator* () const noexcept {
+        auto i = _nodes(_k);
+        return reference(i, _lists[i]);
+    }
+};
+
+/**
+ * N - max number of nodes in graph.
+ */
+template <typename EdgeT, size_t N>
+class AdjLst {
+public:
+    typedef EdgeT edge_type;
+    typedef typename EdgeT::value_type value_type;
+    typedef typename EdgeT::tail_type tail_type;
+    typedef typename EdgeT::head_type head_type;
+
+    typedef SortSeq<value_type, N> node_list_type;
+    typedef EncodedObjectSortSeq<head_type, N> head_list_type;
+
+    typedef AdjLstIter<node_list_type, head_list_type> iterator;
+    typedef AdjLstIter<const node_list_type, const head_list_type> const_iterator;
+private:
+    node_list_type _nodes;
+    head_list_type _lists[N];
+public:
+    constexpr void reset() noexcept {
+        for(auto& list: _lists) {
+            list.reset();
+        }
+    }
+
+    constexpr void connect(edge_type edge) noexcept {
+        if (0 == _lists[edge.i].size()) {
+            _nodes.insert(edge.i);
+        }
+        _lists[edge.i].insert(edge.head());
+    }
+
+    constexpr void disconnect(edge_type edge) noexcept {
+        _lists[edge.i].remove(edge.head());
+        if (0 == _lists[edge.i].size()) {
+            _nodes.remove(edge.i);
+        }
+    }
+
+    constexpr size_t size() const noexcept {
+        return _nodes.size();
+    }
+
+    constexpr auto& operator() (this auto&& self, size_t i) noexcept {
+        return self._lists[i];
+    }
+
+    constexpr size_t degree(size_t i) const noexcept {
+        return _lists[i].size();
+    }
+
+    constexpr auto begin() noexcept {
+        return iterator(_nodes, _lists, 0);
+    }
+
+    constexpr auto end() noexcept {
+        return iterator(_nodes, _lists, _nodes.size());
+    }
+
+    constexpr auto begin() const noexcept {
+        return const_iterator(_nodes, _lists, 0);
+    }
+
+    constexpr auto end() const noexcept {
+        return const_iterator(_nodes, _lists, _nodes.size());
+    }
+};
+
+template <typename T, size_t N, size_t M>
+class Graph {
+public:
+    typedef T node_type;
+
+    typedef typename std::make_unsigned<T>::type unsigned_int;
+    typedef typename std::make_signed<T>::type signed_int;
+
+    typedef signed_int flow_t;
+    typedef signed_int cost_t;
+    typedef signed_int caps_t;
+
+    typedef Matrix<bool, N>   adjmat_type;
+    typedef Matrix<flow_t, N> flow_matrix;
+    typedef Matrix<cost_t, N> cost_matrix;
+    typedef Matrix<caps_t, N> caps_matrix;
+
+    typedef Edge<T, M> edge_type;
+    typedef AdjLst<edge_type, N> adjlst_type;
+    typedef SortSeq<node_type, N> nodeseq_type;
+private:
+
+    nodeseq_type _nodes;
+    adjlst_type  _outbound;
+    adjlst_type  _inbound;
+    adjmat_type  _adjm[M];
+    flow_matrix  _flow[M];
+    cost_matrix  _cost[M];
+    caps_matrix  _caps[M];
+
+public:
+
+    constexpr Graph() noexcept {}
+
+    constexpr Graph(size_t n) noexcept {
+        reset(n);
+    }
+
+    constexpr auto const& nodes() const noexcept {
+        return _nodes;
+    }
+
+    constexpr auto const& outbound() const noexcept {
+        return _outbound;
+    }
+
+    constexpr auto const& outbound(node_type i) const noexcept {
+        return _outbound(i);
+    }
+
+    constexpr auto const& inbound() const noexcept {
+        return _inbound;
+    }
+
+    constexpr auto const& inbound(node_type i) const noexcept {
+        return _inbound(i);
+    }
+
+    /**
+     * Returns the value provided to the constructor or to reset().
+     *
+     * The returned value determines maximum possible node index. It's not
+     * the actual number of nodes existing in the graph.
+     */
+    constexpr auto size() const noexcept {
+        return _adjm[0].size();
+    }
+
+    constexpr void reset(size_t n, flow_t x = 0, cost_t c = std::numeric_limits<cost_t>::max(), caps_t u = 0) noexcept {
+        for (size_t m = 0; m < M; ++m) {
+            _adjm[m].reset(n, 0);
+            _flow[m].reset(n, x);
+            _cost[m].reset(n, c);
+            _caps[m].reset(n, u);
+        }
+        _outbound.reset();
+        _inbound.reset();
+    }
+
+    constexpr void connect(edge_type e, cost_t c = 1) noexcept {
+        adjm(e) = true;
+        cost(e) = c;
+        _outbound.connect(e);
+        _inbound.connect(e.reversed());
+        _nodes.insert(e.i);
+        _nodes.insert(e.j);
+    }
+
+    constexpr bool connected(edge_type e) const noexcept {
+        return adjm(e);
+    }
+
+    constexpr void disconnect(edge_type e) noexcept {
+        _adjm[e.m](e.i, e.j) = false;
+        _outbound.disconnect(e);
+        _inbound.disconnect(e.reversed());
+        if (0 == _outbound(e.i).size() && 0 == _inbound(e.i).size()) {
+            _nodes.remove(e.i);
+        }
+        if (0 == _outbound(e.j).size() && 0 == _inbound(e.j).size()) {
+            _nodes.remove(e.j);
+        }
+    }
+
+    constexpr void remove(node_type i) noexcept {
+        for (size_t m = 0; m < M; ++m) {
+            _adjm[m].set(i, false);
+            _flow[m].set(i, 0);
+            _cost[m].set(i, std::numeric_limits<cost_t>::max());
+            _caps[m].set(i, std::numeric_limits<caps_t>::max());
+        }
+        _outbound.remove(i);
+        _inbound.remove(i);
+        _nodes.remove(i);
+    }
+
+    // Add capacity to edge
+    constexpr void add(edge_type e, caps_t du = 1) noexcept {
+        if (!connected(e)) {
+            connect(e);
+        }
+
+        if (caps(e) < std::numeric_limits<caps_t>::max() - du) {
+            caps(e) += du;
+        } else {
+            caps(e) = std::numeric_limits<caps_t>::max();
+        }
+    }
+
+    // Remve capacity from edge
+    constexpr void sub(edge_type e, caps_t du = 1) noexcept {
+        if (du < caps(e)) {
+            caps(e) -= du;
+        } else {
+            caps(e) = 0;
+        }
+    }
+
+    constexpr bool adjm(edge_type e) const noexcept {
+        return _adjm[e.m](e.i, e.j);
+    }
+
+    constexpr bool& adjm(edge_type e) noexcept {
+        return _adjm[e.m](e.i, e.j);
+    }
+
+    constexpr flow_t flow(edge_type e) const noexcept {
+        return _flow[e.m](e.i, e.j);
+    }
+
+    constexpr flow_t& flow(edge_type e) noexcept {
+        return _flow[e.m](e.i, e.j);
+    }
+
+    constexpr cost_t cost(edge_type e) const noexcept {
+        return _cost[e.m](e.i, e.j);
+    }
+
+    constexpr cost_t& cost(edge_type e) noexcept {
+        return _cost[e.m](e.i, e.j);
+    }
+
+    constexpr caps_t caps(edge_type e) const noexcept {
+        return _caps[e.m](e.i, e.j);
+    }
+
+    constexpr caps_t& caps(edge_type e) noexcept {
+        return _caps[e.m](e.i, e.j);
+    }
+
+    constexpr auto outdegree(node_type i) const noexcept {
+        return _outbound.degree(i);
+    }
+
+    constexpr auto indegree(node_type i) const noexcept {
+        return _inbound.degree(i);
+    }
+
+    constexpr auto outflow(node_type i) const noexcept {
+        flow_t x = 0;
+        for (auto head: _outbound(i)) {
+            x += flow(edge_type(i, head));
+        }
+        return x;
+    }
+
+    constexpr auto inflow(node_type i) const noexcept {
+        flow_t x = 0;
+        for (auto head: _inbound(i)) {
+            x += flow(edge_type(head, i));
+        }
+        return x;
+    }
+
+    constexpr auto balance(node_type i) const noexcept {
+        return inflow(i) - outflow(i);
+    }
+};
+
+} /* namespace Templates */
 
 typedef uint8_t unum_t; // unsigned integer value
 typedef typename std::make_signed<unum_t>::type snum_t; // signed integer value
@@ -36,427 +805,6 @@ typedef typename Edge::head_type Head;
 typedef typename Edge::tail_type Tail;
 
 typedef Templates::AdjLst<Edge,NMAX> AdjLst;
-
-
-///**
-// * Flow matrix (a kind of adjacency matrix).
-// */
-//typedef Matrix<snum_t, NMAX> FlowMat;
-//
-///**
-// * Sorted sequence of numbers.
-// */
-//template <size_t N, typename T>
-//class SortSeq {
-//    size_t _n;
-//    T _seq[N];
-//
-//    constexpr ptrdiff_t _insertion_index(T v) const noexcept {
-//        if (0 == _n) {
-//            return 0;
-//        }
-//
-//        if (v < _seq[0]) {
-//            return 0;
-//        }
-//
-//        if (v > _seq[_n-1]) {
-//            return _n;
-//        }
-//
-//        T lo = 0, hi = _n-1;
-//        // Find the index using bisection
-//        for (auto mid = (hi + lo)/2; (hi - lo) > 1; mid = (lo + hi)/2) {
-//            if (v < _seq[mid]) {
-//                hi = mid;
-//            } else if (v > _seq[mid]) {
-//                lo = mid;
-//            } else {
-//                return -1; // already exists
-//            }
-//        }
-//
-//        if (v == _seq[lo] || v == _seq[hi]) {
-//            return -1;
-//        }
-//
-//        return hi;
-//    }
-//
-//    constexpr ptrdiff_t _removal_index(T v) const noexcept {
-//        if (0 == _n) {
-//            return -1;
-//        }
-//
-//        if (v < _seq[0] || v > _seq[_n-1]) {
-//            return -1;
-//        }
-//
-//        T lo = 0, hi = _n-1;
-//        // Find the index using bisection
-//        for (auto mid = (hi + lo)/2; (hi - lo) > 1; mid = (lo + hi)/2) {
-//            if (v < _seq[mid]) {
-//                hi = mid;
-//            } else if (v > _seq[mid]){
-//                lo = mid;
-//            } else {
-//                return mid; // found
-//            }
-//        }
-//
-//        if (v == _seq[lo]) {
-//            return lo;
-//        }
-//
-//        if (v == _seq[hi]) {
-//            return hi;
-//        }
-//
-//        return -1;
-//    }
-//
-//    constexpr void _unshift(T v, size_t at = 0) noexcept {
-//        for (auto j = _n; j > at; --j) {
-//            _seq[j] = _seq[j-1];
-//        }
-//        _seq[at] = v;
-//        ++_n;
-//    }
-//
-//    constexpr auto _shift(size_t at = 0) noexcept {
-//        auto v = _seq[at];
-//
-//        for (T j = at + 1; j < _n; ++j) {
-//            _seq[j-1] = _seq[j];
-//        }
-//        --_n;
-//
-//        return v;
-//    }
-//
-//public:
-//    constexpr SortSeq() noexcept: _n(0) {}
-//
-//    constexpr auto size() const noexcept {
-//        return _n;
-//    }
-//
-//    constexpr void reset() noexcept {
-//        _n = 0;
-//    }
-//
-//    constexpr auto operator() (size_t k) const noexcept {
-//        return _seq[k];
-//    }
-//
-//    constexpr void insert(T v) noexcept {
-//        auto const at = _insertion_index(v);
-//        if (-1 != at) {
-//            _unshift(v, at);
-//        }
-//    }
-//
-//    constexpr void remove(T v) noexcept {
-//        auto const at = _removal_index(v);
-//        if (-1 != at) {
-//            _shift(at);
-//        }
-//    }
-//
-//    constexpr auto* begin(this auto&& self) noexcept {
-//        return &self._seq[0];
-//    }
-//
-//    constexpr auto* end(this auto&& self) noexcept {
-//        return &self._seq[self._n];
-//    }
-//};
-
-//template<size_t N = NMAX>
-//using NodeSeq = SortSeq<N, unum_t>;
-//
-//template <class TNodeLst> class AdjLstRef {
-//    unum_t    _i;
-//    TNodeLst& _list;
-//public:
-//    constexpr AdjLstRef(unum_t i, TNodeLst& list) noexcept: _i(i), _list(list) {}
-//
-//    constexpr auto i() const noexcept {
-//        return _i;
-//    }
-//
-//    constexpr TNodeLst& list() const noexcept {
-//        return _list;
-//    }
-//
-//    constexpr operator TNodeLst& () const noexcept {
-//        return _list;
-//    }
-//};
-//
-//template <class TNodeLst, class TNodeSeq> class AdjLstIterator {
-//    TNodeLst* _lists;
-//    TNodeSeq& _nodes;
-//    unum_t   _k;
-//public:
-//    constexpr AdjLstIterator(TNodeLst* lists, TNodeSeq& vtxseq, int pos = 0) noexcept
-//        : _lists(lists), _nodes(vtxseq), _k(pos)
-//    { }
-//
-//    constexpr void operator++() noexcept { ++_k; }
-//    constexpr void operator--() noexcept { --_k; }
-//
-//    template<class TOther>
-//    constexpr bool operator == (const TOther& other) const noexcept {
-//        return _lists == other._lists && &_nodes == &other._nodes && _k == other._k;
-//    }
-//
-//    template<class TOther>
-//    constexpr bool operator != (const TOther& other) const noexcept {
-//        return !(*this == other);
-//    }
-//
-//    constexpr AdjLstRef<TNodeLst> operator* () const noexcept {
-//        auto _i = _nodes(_k);
-//        return AdjLstRef<TNodeLst>(_i, _lists[_i]);
-//    }
-//};
-//
-///**
-// * Adjacency list for a graph.
-// */
-//class AdjLst {
-//    NodeSeq<NMAX>   _nodes;
-//    SortSeq<NMAX-1,unum_t> _lists[NMAX];
-//public:
-//    constexpr void reset() noexcept {
-//        for(auto& list: _lists) {
-//            list.reset();
-//        }
-//    }
-//
-//    constexpr auto& operator() (this auto&& self, unum_t i) noexcept {
-//        return self._lists[i];
-//    }
-//
-//    constexpr void connect(unum_t i, unum_t j) noexcept {
-//        if (0 == _lists[i].size()) {
-//            _nodes.insert(i);
-//        }
-//        _lists[i].insert(j);
-//    }
-//
-//    constexpr void disconnect(unum_t i, unum_t j) noexcept {
-//        _lists[i].remove(j);
-//        if (0 == _lists[i].size()) {
-//            _nodes.remove(i);
-//        }
-//    }
-//
-//    constexpr void remove(unum_t i) noexcept {
-//        unum_t rj[NMAX];
-//        unum_t rn = 0;
-//
-//        _lists[i].reset();
-//        _nodes.remove(i);
-//        for (auto j: _nodes) {
-//            _lists[j].remove(i);
-//            if (0 == _lists[j].size()) {
-//                rj[rn++] = j;
-//            }
-//        }
-//
-//        for (; rn > 0;) {
-//            _nodes.remove(rj[--rn]);
-//        }
-//    }
-//
-//    constexpr auto size() const noexcept {
-//        return _nodes.size();
-//    }
-//
-//    constexpr auto degree(unum_t i) const noexcept {
-//        return _lists[i].size();
-//    }
-//
-//    constexpr auto begin() const noexcept {
-//        return AdjLstIterator<SortSeq<NMAX-1,unum_t> const, NodeSeq<NMAX> const>(_lists, _nodes, 0);
-//    }
-//
-//    constexpr auto end() const noexcept {
-//        return AdjLstIterator<SortSeq<NMAX-1,unum_t> const, NodeSeq<NMAX> const>(_lists, _nodes, _nodes.size());
-//    }
-//};
-//
-//class Pair {
-//    snum_t _i;
-//    snum_t _j;
-//public:
-//    constexpr Pair(): _i(-1), _j(-1) {}
-//    constexpr Pair(snum_t i, snum_t j): _i(i), _j(j) {}
-//    constexpr snum_t i() const noexcept { return _i; }
-//    constexpr snum_t j() const noexcept { return _j; }
-//};
-//
-//class Graph {
-//    NodeSeq<NMAX> _nodes;
-//    FlowMat       _flow;
-//    AdjLst        _outbound;
-//    AdjLst        _inbound;
-//
-//    constexpr void _remove_arc(unum_t i, unum_t j) noexcept {
-//        _outbound.disconnect(i, j);
-//        _inbound.disconnect(j, i);
-//        if (0 == _outbound(i).size() && 0 == _inbound(i).size()) {
-//            _nodes.remove(i);
-//        }
-//        if (0 == _outbound(j).size() && 0 == _inbound(j).size()) {
-//            _nodes.remove(j);
-//        }
-//    }
-//
-//public:
-//
-//    constexpr Graph() noexcept: _flow(0) {}
-//    constexpr Graph(int n) noexcept: _flow(n) {}
-//
-//    constexpr auto const& nodes() const noexcept {
-//        return _nodes;
-//    }
-//
-//    constexpr auto& flow() const noexcept {
-//        return _flow;
-//    }
-//
-//    constexpr auto flow(unum_t i, unum_t j) const noexcept {
-//        return _flow(i, j);
-//    }
-//
-//    constexpr auto const& outbound() const noexcept {
-//        return _outbound;
-//    }
-//
-//    constexpr auto const& outbound(unum_t i) const noexcept {
-//        return _outbound(i);
-//    }
-//
-//    constexpr auto const& inbound() const noexcept {
-//        return _inbound;
-//    }
-//
-//    constexpr auto const& inbound(unum_t i) const noexcept {
-//        return _inbound(i);
-//    }
-//
-//    /**
-//     * Returns the value provided to the constructor or to reset().
-//     *
-//     * The returned value determines maximum possible node index. It's not
-//     * the actual number of nodes existing in the graph.
-//     */
-//    constexpr auto size() const noexcept {
-//        return _flow.size();
-//    }
-//
-//    constexpr void reset(unum_t n) noexcept {
-//        _flow.reset(n);
-//        _outbound.reset();
-//        _inbound.reset();
-//    }
-//
-//    constexpr void add(unum_t i, unum_t j) noexcept {
-//        add(i, j, 1);
-//    }
-//
-//    constexpr void add(unum_t i, unum_t j, unum_t f) noexcept {
-//        _outbound.connect(i, j);
-//        _inbound.connect(j, i);
-//        _flow(i, j) += f;
-//        _nodes.insert(i);
-//        _nodes.insert(j);
-//    }
-//
-//    constexpr void sub(unum_t i, unum_t j) noexcept {
-//        sub(i, j, 1);
-//    }
-//
-//    constexpr void sub(unum_t i, unum_t j, unum_t f) noexcept {
-//        auto f2 = (_flow(i, j) -= f);
-//        if (0 == f2) {
-//            _remove_arc(i, j);
-//        }
-//    }
-//
-//    constexpr void remove(unum_t i) noexcept {
-//        _flow.remove(i);
-//        _outbound.remove(i);
-//        _inbound.remove(i);
-//        _nodes.remove(i);
-//    }
-//
-//    template<size_t N, typename T>
-//    constexpr void remove(Vector<T, N> const& nodes) noexcept {
-//        for (auto i: nodes) {
-//            remove(i);
-//        }
-//    }
-//
-//    constexpr void disconnect(unum_t i, unum_t j) noexcept {
-//        _flow(i, j) = 0;
-//        _remove_arc(i, j);
-//    }
-//
-//    constexpr void disconnect(Pair const& arc) noexcept {
-//        disconnect(arc.i(), arc.j());
-//    }
-//
-//    template<size_t N, typename T>
-//    constexpr void disconnect(Vector<T, N> const& arcs) noexcept {
-//        for (auto arc: arcs) {
-//            disconnect(arc);
-//        }
-//    }
-//
-//    constexpr unum_t outdegree(unum_t i) const noexcept {
-//        return _outbound.degree(i);
-//    }
-//
-//    constexpr unum_t indegree(unum_t i) const noexcept {
-//        return _inbound.degree(i);
-//    }
-//
-//    constexpr snum_t outflow(unum_t i) const noexcept {
-//        snum_t x = 0;
-//        for (auto j: _outbound(i)) {
-//            x += _flow(i, j);
-//        }
-//        return x;
-//    }
-//
-//    constexpr snum_t inflow(unum_t i) const noexcept {
-//        snum_t x = 0;
-//        for (auto j: _inbound(i)) {
-//            x += _flow(j, i);
-//        }
-//        return x;
-//    }
-//
-//    constexpr snum_t balance(unum_t i) const noexcept {
-//        return inflow(i) - outflow(i);
-//    }
-//
-//    constexpr bool is_terminal(unum_t i) const noexcept {
-//        return 0 == outdegree(i) || 0 == indegree(i);
-//    }
-//
-//    constexpr bool is_isolated(unum_t i) const noexcept {
-//        return 0 == outdegree(i) && 0 == indegree(i);
-//    }
-//
-//    constexpr bool is_source_or_sink(unum_t i) const noexcept {
-//        return 0 == outflow(i) || 0 == inflow(i);
-//    }
-//};
 
 /**
  * Encapsulates shortest paths solution.
