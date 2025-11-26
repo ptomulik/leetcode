@@ -3,6 +3,8 @@
 
 #include <algorithm>
 
+namespace Templates {
+
 /**
  * Square matrix with inplace storage.
  */
@@ -35,12 +37,15 @@ public:
         return self._mat[i][j];
     }
 
-    // Remove node from graph (node indices and _n remain unchanged!)
-    constexpr void remove(size_t i) noexcept {
+    // Set value to all elements of row and column i.
+    constexpr void set(size_t i, T const& v) noexcept {
         for (size_t j = 0; j < _n; ++j) {
-            _mat[i][j] = 0;
-            _mat[j][i] = 0;
+            _mat[i][j] = v;
+            _mat[j][i] = v;
         }
     }
 };
+
+} /* namespace Templates */
+
 #endif /* LC_1601_MATRIX_HPP */

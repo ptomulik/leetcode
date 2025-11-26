@@ -1,4 +1,4 @@
-#include "solution.cpp"
+#include "solution.hpp"
 #include "io.hpp"
 
 #include <vector>
@@ -43,6 +43,7 @@ int main()
 
         Solution s;
         auto total = s.maximumRequests(c.n, c.requests);
+        std::cout << s.graph << std::endl;
         std::cout << (total == c.expected ? "✔ " : "⨯ ") << c << "; actual: " << total << std::endl;
 
         std::cout << "========= end case ==========" << std::endl;
@@ -50,3 +51,4 @@ int main()
 
     return 0;
 }
+

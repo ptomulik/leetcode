@@ -1,5 +1,9 @@
-#ifndef 
+#ifndef LC_1601_VECTOR_HPP
+#define LC_1601_VECTOR_HPP
+
 #include <algorithm>
+
+namespace Templates {
 
 /**
  * Vector with inplace storage.
@@ -65,3 +69,7 @@ public:
         return &self._vec[self._n];
     }
 };
+
+} /* namespace Templates */
+
+#endif /* LC_1601_VECTOR_HPP */
