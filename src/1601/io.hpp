@@ -58,7 +58,7 @@ std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>&
 
 template<typename CharT, class Traits, typename T, size_t M>
 std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Endpoint<T, M> const& endpoint) {
-    os << (int) endpoint.i << "[" << (int) endpoint.m << "]";
+    os << (int) endpoint.node << "[" << (int) endpoint.edge << "]";
     return os;
 }
 
