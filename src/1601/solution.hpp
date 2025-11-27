@@ -608,6 +608,9 @@ public:
     typedef Matrix<caps_t, N> caps_matrix;
 
     typedef Edge<T, M> edge_type;
+    typedef typename edge_type::endpoint_type endpoint_type;
+    typedef typename edge_type::head_type head_type;
+    typedef typename edge_type::tail_type tail_type;
     typedef AdjLst<edge_type, N> adjlst_type;
     typedef SortSeq<node_type, N> nodeseq_type;
 private:
@@ -1004,10 +1007,13 @@ typedef typename Graph::edge_type Edge;
  */
 class Optimizer {
 public:
-    typedef typename Graph::noode_type node_type;
-    typedef Vector<node_type, NMAX> NodeVec;
-    typedef Vector<snum_t, NMAX> SnumVec;
-    typedef Vector<unum_t, NMAX> UnumVec;
+    typedef typename Graph::node_type node_type;
+    typedef typename Graph::endpoint_type endpoint_type;
+    typedef typename Graph::head_type head_type;
+    typedef typename Graph::tail_type tail_type;
+    typedef Templates::Vector<node_type, NMAX> NodeVec;
+    typedef Templates::Vector<snum_t, NMAX> SnumVec;
+    typedef Templates::Vector<unum_t, NMAX> UnumVec;
     typedef UnumVec DistVec;
     typedef SnumVec PredVec;
 private:
@@ -1018,7 +1024,7 @@ private:
     mutable PredVec _pred1;             //! Vector of predecessors for shortest paths
 //    mutable PairVec _pairs1;            //! Vector holding node pairs.
 //    mutable ShortestPaths _shortest1;   //! Structure of shortest paths
-    mutable Vector<UnumVec, NMAX> _bucket;
+    mutable Templates::Vector<UnumVec, NMAX> _bucket;
 
 //    Dijkstra _dijkstra;
 //    Tarjan _tarjan;
@@ -1124,7 +1130,7 @@ public:
         unum_t total = 0;
         for (auto const& ref: graph.outbound()) {
             auto i = ref.i();
-            for (auto h: ref.list()) {
+            for (head_type h: ref.list()) {
                 total += graph.flow({i, h.i, h.m});
             }
         }
