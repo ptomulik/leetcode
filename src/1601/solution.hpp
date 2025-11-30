@@ -22,18 +22,51 @@
 #include <type_traits>
 #include <vector>
 
-namespace Templates {
+typedef uint8_t unum_t; // unsigned integer value
+typedef typename std::make_unsigned<unum_t>::type uint_t;
+typedef typename std::make_signed<unum_t>::type sint_t; // signed integer value
+typedef uint_t node_t; //! Node identifier.
+typedef uint_t edge_t; //! Arc number for multiarc.
+typedef sint_t flow_t; //! Arc flow.
+typedef sint_t cost_t; //! Arc flow cost.
+typedef sint_t caps_t; //! Arc capacity.
+typedef cost_t dist_t; //! Node distance on path.
+typedef node_t pred_t; //! Node predecessor on path.
+typedef sint_t potn_t; //! Node potential.
+
+constexpr const size_t NMAX = 20; //! Max supported no. nodes in graph.
+constexpr const size_t MMAX = 2;  //! Residual network is a multigraph with up to MMAX parallel arcs.
+// constexpr unum_t FMAX = 16; //! Max supported total capacity (sum of arc capacities).
+
+constexpr cost_t cost_max() noexcept {
+    return std::numeric_limits<cost_t>::max();
+}
+
+constexpr caps_t caps_max() noexcept {
+    return std::numeric_limits<caps_t>::max();
+}
+
+constexpr caps_t caps_min() noexcept {
+    return std::numeric_limits<caps_t>::min();
+}
 
 /**
  * Vector of size N with inplace storage.
  */
 template <typename T, size_t N>
 class Vector {
-    size_t _n;
-    T      _vec[N];
 public:
-
     typedef T value_type;
+    typedef value_type* pointer;
+    typedef value_type const* const_pointer;
+    typedef value_type* iterator;
+    typedef value_type const* const_iterator;
+    typedef value_type& reference;
+    typedef value_type const& const_reference;
+private:
+    size_t     _n;
+    value_type _vec[N];
+public:
 
     constexpr Vector() noexcept: _n(0u) {}
 
@@ -45,7 +78,7 @@ public:
         return self._vec[i];
     }
 
-    constexpr void reset(size_t n, T const& v = T()) noexcept {
+    constexpr void reset(size_t n, value_type const& v = value_type()) noexcept {
         resize(n);
         fill(v);
     }
@@ -54,10 +87,10 @@ public:
         _n = n;
     }
 
-    constexpr T* erase(T* pos) noexcept {
+    constexpr iterator erase(iterator pos) noexcept {
         auto const* const e = end();
         if (pos >= begin() && pos < e) {
-            for (T* ptr = pos; ptr < e; ++ptr) {
+            for (iterator ptr = pos; ptr < e; ++ptr) {
                 *ptr = *(ptr + 1);
             }
             --_n;
@@ -65,7 +98,7 @@ public:
         return pos;
     }
 
-    constexpr void fill(T const& v) noexcept {
+    constexpr void fill(value_type const& v) noexcept {
         std::fill_n(&_vec[0], _n, v);
     }
 
@@ -73,11 +106,11 @@ public:
         _n = 0;
     }
 
-    constexpr void push_back(T value) noexcept {
+    constexpr void push_back(value_type value) noexcept {
         _vec[_n++] = value;
     }
 
-    constexpr T pop_back() noexcept {
+    constexpr value_type pop_back() noexcept {
         return _vec[--_n];
     }
 
@@ -95,14 +128,19 @@ public:
  */
 template <typename T, size_t N>
 class Matrix {
-    size_t _n;
-    T      _mat[N][N];
+public:
+    typedef T value_type;
+    typedef value_type* pointer;
+    typedef value_type const* const_pointer;
+private:
+    size_t     _n;
+    value_type _mat[N][N];
 public:
     constexpr Matrix() noexcept: _n(0u) { }
     constexpr Matrix(size_t n) noexcept : _n(n) { }
-    constexpr Matrix(size_t n, T const& x) noexcept : _n(n), _mat{x} { }
+    constexpr Matrix(size_t n, value_type const& x) noexcept : _n(n), _mat{x} { }
 
-    constexpr void reset(size_t n, T const& v = T()) noexcept {
+    constexpr void reset(size_t n, value_type const& v = value_type()) noexcept {
         resize(n);
         fill(v);
     }
@@ -111,7 +149,7 @@ public:
         _n = n;
     }
 
-    constexpr void fill(T const& v) noexcept {
+    constexpr void fill(value_type const& v) noexcept {
         std::fill_n(&_mat[0][0], N * N, v);
     }
 
@@ -124,7 +162,7 @@ public:
     }
 
     // Set value to all elements of row and column i.
-    constexpr void set(size_t i, T const& v) noexcept {
+    constexpr void set(size_t i, value_type const& v) noexcept {
         for (size_t j = 0; j < _n; ++j) {
             _mat[i][j] = v;
             _mat[j][i] = v;
@@ -269,89 +307,19 @@ public:
 };
 
 /**
- * Edge endpoint.
- *
- * Encapsulates node index i of node at endpoint and number m (multi-graph).
- */
-template<typename T, size_t M>
-struct Endpoint {
-    typedef T value_type;
-
-    value_type node;
-    value_type edge;
-
-    constexpr Endpoint(value_type encoded) noexcept : node(encoded / M), edge(encoded % M) {}
-    constexpr Endpoint(value_type node, value_type edge) noexcept : node(node), edge(edge) {}
-
-    constexpr value_type encoded() const noexcept {
-        return M * node + edge;
-    }
-};
-
-template <typename T>
-struct TypeTraits {
-    typedef typename std::make_unsigned<T>::type unsigned_int;
-    typedef typename std::make_signed<T>::type signed_int;
-    typedef unsigned_int node_type;
-};
-
-template <typename T, size_t M>
-struct EdgeTraits {
-    typedef typename TypeTraits<T>::node_type node_type;
-    typedef Endpoint<T, M> endpoint_type;
-    typedef endpoint_type tail_type;
-    typedef endpoint_type head_type;
-};
-
-template<typename T, size_t M>
-struct Edge {
-    constexpr static const size_t max_m = M;
-
-    typedef T value_type;
-    typedef typename EdgeTraits<T, M>::node_type node_type;
-    typedef typename EdgeTraits<T, M>::endpoint_type endpoint_type;
-    typedef typename EdgeTraits<T, M>::tail_type tail_type;
-    typedef typename EdgeTraits<T, M>::head_type head_type;
-
-    node_type i;
-    node_type j;
-    T m;
-
-    constexpr Edge(node_type i, node_type j, T m) noexcept : i(i), j(j), m(m) {}
-    constexpr Edge(node_type i, head_type h) noexcept : i(i), j(h.node), m(h.edge) {}
-    constexpr Edge(tail_type t, node_type j) noexcept : i(t.node), j(j), m(t.edge) {}
-
-    constexpr auto tail() const noexcept {
-        return tail_type(i, m);
-    }
-
-    constexpr auto head() const noexcept {
-        return head_type(j, m);
-    }
-
-    constexpr auto reversed() const noexcept {
-        return Edge<T, M>(j, i, m);
-    }
-
-    constexpr auto reversed(T m) const noexcept {
-        return Edge<T, M>(j, i, m);
-    }
-};
-
-/**
  * Reference to an "encoded" object (forgive me naming).
  *
  * Encapsulates a reference to an "encoded" value. Provides methods for
- * converting between the encoded value type and ObjectT.
+ * converting between the encoded value type and TObject.
  */
-template <typename ObjectT>
+template <typename TObject>
 class EncodedObjectRef {
 public:
-    typedef typename std::remove_cv<ObjectT>::type object_type;
-    typedef typename std::remove_cv<ObjectT>::type value_type;
-    typedef typename ObjectT::value_type encoded_type;
+    typedef typename std::remove_cv<TObject>::type object_type;
+    typedef object_type value_type;
+    typedef typename TObject::encoded_type encoded_type;
     typedef typename std::conditional<
-        std::is_const<ObjectT>::value,
+        std::is_const<TObject>::value,
         typename std::add_const<encoded_type>::type,
         encoded_type
     >::type& encoded_reference;
@@ -365,8 +333,8 @@ public:
         return *this;
     }
 
-    constexpr operator value_type() const noexcept {
-        return value_type(_ref);
+    constexpr operator object_type() const noexcept {
+        return object_type(_ref);
     }
 
     constexpr encoded_type encoded() const noexcept {
@@ -374,19 +342,19 @@ public:
     }
 };
 
-template <typename ObjectT>
+template <typename TObject>
 class EncodedObjectIter {
 public:
-    typedef typename std::remove_cv<ObjectT>::type object_type;
-    typedef typename std::remove_cv<ObjectT>::type value_type;
-    typedef typename ObjectT::value_type encoded_type;
+    typedef typename std::remove_cv<TObject>::type object_type;
+    typedef object_type value_type;
+    typedef typename TObject::encoded_type encoded_type;
     typedef typename std::conditional<
-        std::is_const<ObjectT>::value,
+        std::is_const<TObject>::value,
         typename std::add_const<encoded_type>::type,
         typename std::remove_const<encoded_type>::type
     >::type* encoded_pointer;
-    typedef EncodedObjectIter<ObjectT> iterator;
-    typedef EncodedObjectRef<ObjectT> reference;
+    typedef EncodedObjectIter<TObject> iterator;
+    typedef EncodedObjectRef<TObject> reference;
 private:
     encoded_pointer _ptr;
 public:
@@ -414,13 +382,13 @@ public:
     }
 };
 
-template <typename ObjectT, size_t N>
+template <typename TObject, size_t N>
 class EncodedObjectSortSeq
 {
 public:
-    typedef ObjectT object_type;
-    typedef ObjectT value_type;
-    typedef typename ObjectT::value_type encoded_type;
+    typedef TObject object_type;
+    typedef TObject value_type;
+    typedef typename TObject::encoded_type encoded_type;
     typedef SortSeq<encoded_type, N> sequence_type;
     typedef EncodedObjectIter<object_type> iterator;
     typedef EncodedObjectIter<const object_type> const_iterator;
@@ -466,16 +434,15 @@ public:
     }
 };
 
-template <typename T, typename HeadLstT>
+template <typename HeadLstT>
 class AdjLstRef {
 public:
-    typedef T node_type;
-    typedef HeadLstT head_list_type;
+    typedef HeadLstT head_list;
 private:
-    node_type _i;
-    head_list_type& _list;
+    node_t _i;
+    head_list& _list;
 public:
-    constexpr AdjLstRef(node_type i, head_list_type& list) noexcept
+    constexpr AdjLstRef(node_t i, head_list& list) noexcept
         : _i(i), _list(list) {
     }
 
@@ -483,7 +450,7 @@ public:
         return _i;
     }
 
-    constexpr head_list_type& list() const noexcept {
+    constexpr head_list& list() const noexcept {
         return _list;
     }
 };
@@ -491,17 +458,15 @@ public:
 template <typename NodeLstT, typename HeadLstT>
 class AdjLstIter {
 public:
-    typedef NodeLstT node_list_type;
-    typedef HeadLstT head_list_type;
-    typedef typename NodeLstT::value_type node_type;
-    typedef typename HeadLstT::value_type head_type;
-    typedef AdjLstRef<node_type, head_list_type> reference;
+    typedef NodeLstT node_list;
+    typedef HeadLstT head_list;
+    typedef AdjLstRef<head_list> reference;
 private:
-    node_list_type& _nodes;
-    head_list_type* _lists;
+    node_list& _nodes;
+    head_list* _lists;
     size_t _k;
 public:
-    constexpr AdjLstIter(node_list_type& nodes, head_list_type* lists, size_t k) noexcept
+    constexpr AdjLstIter(node_list& nodes, head_list* lists, size_t k) noexcept
         : _nodes(nodes), _lists(lists), _k(k) {
     }
 
@@ -525,24 +490,73 @@ public:
 };
 
 /**
- * N - max number of nodes in graph.
+ * Edge endpoint.
+ *
+ * Encapsulates node index i of node at endpoint and number m (multi-graph).
  */
-template <typename EdgeT, size_t N>
+struct Endpoint {
+    typedef uint_t encoded_type;
+
+    node_t node;
+    edge_t edge;
+
+    constexpr Endpoint(encoded_type encoded) noexcept : node(encoded / MMAX), edge(encoded % MMAX) {}
+    constexpr Endpoint(encoded_type node, encoded_type edge) noexcept : node(node), edge(edge) {}
+
+    constexpr encoded_type encoded() const noexcept {
+        return MMAX * node + edge;
+    }
+};
+
+typedef Endpoint Head;
+typedef Endpoint Tail;
+
+/**
+ * Graph edge.
+ *
+ * e.i - source node
+ * e.j - target node
+ * e.m - edge number for multi-graph.
+ */
+struct Edge {
+    node_t i;
+    node_t j;
+    edge_t m;
+
+    constexpr Edge(node_t i, node_t j, edge_t m) noexcept : i(i), j(j), m(m) {}
+    constexpr Edge(node_t i, Head h) noexcept : i(i), j(h.node), m(h.edge) {}
+    constexpr Edge(Tail t, node_t j) noexcept : i(t.node), j(j), m(t.edge) {}
+
+    constexpr auto tail() const noexcept {
+        return Tail(i, m);
+    }
+
+    constexpr auto head() const noexcept {
+        return Head(j, m);
+    }
+
+    constexpr auto reversed() const noexcept {
+        return Edge(j, i, m);
+    }
+
+    constexpr auto reversed(edge_t m) const noexcept {
+        return Edge(j, i, m);
+    }
+};
+
+/**
+ * Ajdacency lists.
+ */
 class AdjLst {
 public:
-    typedef EdgeT edge_type;
-    typedef typename EdgeT::value_type value_type;
-    typedef typename EdgeT::tail_type tail_type;
-    typedef typename EdgeT::head_type head_type;
+    typedef SortSeq<node_t, NMAX> node_list;
+    typedef EncodedObjectSortSeq<Head, NMAX> head_list;
 
-    typedef SortSeq<value_type, N> node_list_type;
-    typedef EncodedObjectSortSeq<head_type, N> head_list_type;
-
-    typedef AdjLstIter<node_list_type, head_list_type> iterator;
-    typedef AdjLstIter<const node_list_type, const head_list_type> const_iterator;
+    typedef AdjLstIter<node_list, head_list> iterator;
+    typedef AdjLstIter<const node_list, const head_list> const_iterator;
 private:
-    node_list_type _nodes;
-    head_list_type _lists[N];
+    node_list _nodes;
+    head_list _lists[NMAX];
 public:
     constexpr void reset() noexcept {
         for(auto& list: _lists) {
@@ -550,17 +564,35 @@ public:
         }
     }
 
-    constexpr void connect(edge_type edge) noexcept {
+    constexpr void connect(Edge edge) noexcept {
         if (0 == _lists[edge.i].size()) {
             _nodes.insert(edge.i);
         }
         _lists[edge.i].insert(edge.head());
     }
 
-    constexpr void disconnect(edge_type edge) noexcept {
+    constexpr void disconnect(Edge edge) noexcept {
         _lists[edge.i].remove(edge.head());
         if (0 == _lists[edge.i].size()) {
             _nodes.remove(edge.i);
+        }
+    }
+
+    constexpr void remove(node_t i) noexcept {
+        node_t rj[NMAX];
+        node_t rn = 0;
+
+        _lists[i].reset();
+        _nodes.remove(i);
+        for (auto j: _nodes) {
+            _lists[j].remove(i);
+            if (0 == _lists[j].size()) {
+                rj[rn++] = j;
+            }
+        }
+
+        for (; rn > 0;) {
+            _nodes.remove(rj[--rn]);
         }
     }
 
@@ -593,66 +625,22 @@ public:
     }
 };
 
-template <typename T, size_t N, size_t M>
-struct GraphTraits {
-    typedef typename TypeTraits<T>::node_type node_type;
-    typedef typename TypeTraits<T>::unsigned_int unsigned_int;
-    typedef typename TypeTraits<T>::signed_int signed_int;
-
-    typedef signed_int flow_type;
-    typedef signed_int cost_type;
-    typedef signed_int caps_type;
-    // typedef signed_int pots_type;
-
-    typedef std::array<Matrix<bool, N>, M>   adjc_matrix;
-    typedef std::array<Matrix<flow_type, N>, M> flow_matrix;
-    typedef std::array<Matrix<cost_type, N>, M> cost_matrix;
-    typedef std::array<Matrix<caps_type, N>, M> caps_matrix;
-    // typedef std::array<Vector<pots_type, N>, M> pots_vector;
-
-    typedef Edge<node_type, M> edge_type;
-    typedef typename EdgeTraits<T, M>::endpoint_type endpoint_type;
-    typedef typename EdgeTraits<T, M>::head_type head_type;
-    typedef typename EdgeTraits<T, M>::tail_type tail_type;
-    typedef AdjLst<edge_type, N> adjc_list;
-    typedef SortSeq<node_type, N> node_list;
-};
-
-template <typename T, size_t N, size_t M>
 class Graph {
 public:
-    typedef typename GraphTraits<T, N, M>::node_type node_type;
-
-    typedef typename TypeTraits<T>::unsigned_int unsigned_int;
-    typedef typename TypeTraits<T>::signed_int signed_int;
-    typedef typename GraphTraits<T, N, M>::flow_type flow_type;
-    typedef typename GraphTraits<T, N, M>::cost_type cost_type;
-    typedef typename GraphTraits<T, N, M>::caps_type caps_type;
-    // typedef typename GraphTraits<T, N, M>::pots_type pots_type;
-
-    typedef typename GraphTraits<T, N, M>::adjc_matrix adjc_matrix;
-    typedef typename GraphTraits<T, N, M>::flow_matrix flow_matrix;
-    typedef typename GraphTraits<T, N, M>::cost_matrix cost_matrix;
-    typedef typename GraphTraits<T, N, M>::caps_matrix caps_matrix;
-    // typedef typename GraphTraits<T, N, M>::pots_vector pots_vector;
-
-    typedef typename GraphTraits<T, N, M>::edge_type edge_type;
-    typedef typename GraphTraits<T, N, M>::endpoint_type endpoint_type;
-    typedef typename GraphTraits<T, N, M>::head_type head_type;
-    typedef typename GraphTraits<T, N, M>::tail_type tail_type;
-
-    typedef typename GraphTraits<T, N, M>::adjc_list adjc_list;
-    typedef typename GraphTraits<T, N, M>::node_list node_list;
+    typedef SortSeq<node_t, NMAX> node_list;
+    typedef std::array<Matrix<bool, NMAX>, MMAX>   adjc_matrix;
+    typedef std::array<Matrix<flow_t, NMAX>, MMAX> flow_matrix;
+    typedef std::array<Matrix<cost_t, NMAX>, MMAX> cost_matrix;
+    typedef std::array<Matrix<caps_t, NMAX>, MMAX> caps_matrix;
 private:
 
     node_list   _nodes;
-    adjc_list   _outbound;
-    adjc_list   _inbound;
+    AdjLst      _outbound;
+    AdjLst      _inbound;
     adjc_matrix _adjc; //! adjacency matrix
     flow_matrix _flow; //! arc flows x_{ij}
     cost_matrix _cost; //! arc costs c_{ij}
     caps_matrix _caps; //! (residual) capacities r_{ij}
-    // pots_vector _pots; //! potentials pi_{i}
 
 public:
 
@@ -670,7 +658,7 @@ public:
         return _outbound;
     }
 
-    constexpr auto const& outbound(node_type i) const noexcept {
+    constexpr auto const& outbound(node_t i) const noexcept {
         return _outbound(i);
     }
 
@@ -678,7 +666,7 @@ public:
         return _inbound;
     }
 
-    constexpr auto const& inbound(node_type i) const noexcept {
+    constexpr auto const& inbound(node_t i) const noexcept {
         return _inbound(i);
     }
 
@@ -692,33 +680,23 @@ public:
         return _adjc[0].size();
     }
 
-    constexpr static cost_type cost_max() noexcept {
-        return std::numeric_limits<cost_type>::max();
-    }
-
-    constexpr static caps_type caps_max() noexcept {
-        return std::numeric_limits<caps_type>::max();
-    }
-
     constexpr void reset(
         size_t n,
-        flow_type x = 0,
-        cost_type c = cost_max(),
-        caps_type u = 0/*,
-        pots_type pi = 0*/
+        flow_t x = 0,
+        cost_t c = cost_max(),
+        caps_t u = 0
     ) noexcept {
-        for (size_t m = 0; m < M; ++m) {
+        for (size_t m = 0; m < MMAX; ++m) {
             _adjc[m].reset(n, 0);
             _flow[m].reset(n, x);
             _cost[m].reset(n, c);
             _caps[m].reset(n, u);
-            // _pots[m].reset(n, pi);
         }
         _outbound.reset();
         _inbound.reset();
     }
 
-    constexpr void connect(edge_type e, cost_type c = 1) noexcept {
+    constexpr void connect(Edge e, cost_t c = 1) noexcept {
         adjc(e) = true;
         cost(e) = c;
         _outbound.connect(e);
@@ -727,7 +705,7 @@ public:
         _nodes.insert(e.j);
     }
 
-    constexpr void disconnect(edge_type e, cost_type c = cost_max()) noexcept {
+    constexpr void disconnect(Edge e) noexcept {
         adjc(e) = false;
         _outbound.disconnect(e);
         _inbound.disconnect(e.reversed());
@@ -739,12 +717,12 @@ public:
         }
     }
 
-    constexpr bool connected(edge_type e) const noexcept {
+    constexpr bool connected(Edge e) const noexcept {
         return adjc(e);
     }
 
-    constexpr void remove(node_type i) noexcept {
-        for (size_t m = 0; m < M; ++m) {
+    constexpr void remove(node_t i) noexcept {
+        for (size_t m = 0; m < MMAX; ++m) {
             _adjc[m].set(i, false);
             _flow[m].set(i, 0);
             _cost[m].set(i, cost_max());
@@ -756,7 +734,7 @@ public:
     }
 
     // Add capacity to edge
-    constexpr void add(edge_type e, caps_type du = 1) noexcept {
+    constexpr void add(Edge e, caps_t du = 1) noexcept {
         if (!connected(e)) {
             connect(e);
         }
@@ -768,8 +746,8 @@ public:
         }
     }
 
-    // Remve capacity from edge
-    constexpr void sub(edge_type e, caps_type du = 1) noexcept {
+    // Remove capacity from edge
+    constexpr void sub(Edge e, caps_t du = 1) noexcept {
         if (du < caps(e)) {
             caps(e) -= du;
         } else {
@@ -777,63 +755,63 @@ public:
         }
     }
 
-    constexpr bool adjc(edge_type e) const noexcept {
+    constexpr bool adjc(Edge e) const noexcept {
         return _adjc[e.m](e.i, e.j);
     }
 
-    constexpr bool& adjc(edge_type e) noexcept {
+    constexpr bool& adjc(Edge e) noexcept {
         return _adjc[e.m](e.i, e.j);
     }
 
-    constexpr flow_type flow(edge_type e) const noexcept {
+    constexpr flow_t flow(Edge e) const noexcept {
         return _flow[e.m](e.i, e.j);
     }
 
-    constexpr flow_type& flow(edge_type e) noexcept {
+    constexpr flow_t& flow(Edge e) noexcept {
         return _flow[e.m](e.i, e.j);
     }
 
-    constexpr cost_type cost(edge_type e) const noexcept {
+    constexpr cost_t cost(Edge e) const noexcept {
         return _cost[e.m](e.i, e.j);
     }
 
-    constexpr cost_type& cost(edge_type e) noexcept {
+    constexpr cost_t& cost(Edge e) noexcept {
         return _cost[e.m](e.i, e.j);
     }
 
-    constexpr caps_type caps(edge_type e) const noexcept {
+    constexpr caps_t caps(Edge e) const noexcept {
         return _caps[e.m](e.i, e.j);
     }
 
-    constexpr caps_type& caps(edge_type e) noexcept {
+    constexpr caps_t& caps(Edge e) noexcept {
         return _caps[e.m](e.i, e.j);
     }
 
-    constexpr auto outdegree(node_type i) const noexcept {
+    constexpr auto outdegree(node_t i) const noexcept {
         return _outbound.degree(i);
     }
 
-    constexpr auto indegree(node_type i) const noexcept {
+    constexpr auto indegree(node_t i) const noexcept {
         return _inbound.degree(i);
     }
 
-    constexpr auto outflow(node_type i) const noexcept {
-        flow_type x = 0;
+    constexpr auto outflow(node_t i) const noexcept {
+        flow_t x = 0;
         for (auto head: _outbound(i)) {
-            x += flow(edge_type(i, head));
+            x += flow(Edge(i, head));
         }
         return x;
     }
 
-    constexpr auto inflow(node_type i) const noexcept {
-        flow_type x = 0;
+    constexpr auto inflow(node_t i) const noexcept {
+        flow_t x = 0;
         for (auto head: _inbound(i)) {
-            x += flow(edge_type(head, i));
+            x += flow(Edge(head, i));
         }
         return x;
     }
 
-    constexpr auto balance(node_type i) const noexcept {
+    constexpr auto balance(node_t i) const noexcept {
         return inflow(i) - outflow(i);
     }
 };
@@ -841,73 +819,66 @@ public:
 /**
  * Encapsulates shortest paths solution.
  */
-template <typename T, size_t N, size_t M>
 class Paths {
 public:
-    typedef TypeTraits<T>::unsigned_int unsigned_int;
-    typedef TypeTraits<T>::signed_int signed_int;
-    typedef EdgeTraits<T, M>::tail_type tail_type;
-    typedef GraphTraits<T, N, M>::edge_type edge_type;
-
-    typedef Vector<unsigned_int, N> dist_vector;
-    typedef Vector<unsigned_int, N> pred_vector;
-    typedef Graph<T, N, M> graph_type;
+    typedef Vector<dist_t, NMAX> dist_vector;
+    typedef Vector<pred_t, NMAX> pred_vector;
 
 private:
     size_t      _i;
-    dist_vector _distances;
-    pred_vector _predecessors;
+    dist_vector _dists; //! Vector of distances.
+    pred_vector _preds; //! Vector of predecessors.
 public:
-    constexpr Paths() noexcept : _i(), _distances(), _predecessors() { }
+    constexpr Paths() noexcept : _i(), _dists(), _preds() { }
 
     constexpr size_t i() const noexcept  {
         return _i;
     }
 
     constexpr size_t size() const noexcept {
-        return _distances.size();
+        return _dists.size();
     }
 
     constexpr void reset(size_t n, size_t i) noexcept {
         _i = i;
-        _distances.reset(n, N);
-        _predecessors.reset(n, -1);
+        _dists.reset(n, NMAX);
+        _preds.reset(n, -1);
     }
 
-    constexpr auto&& distances(this auto&& self) noexcept {
-        return self._distances;
+    constexpr auto&& dists(this auto&& self) noexcept {
+        return self._dists;
     }
 
-    constexpr auto&& distance(this auto&& self, size_t j) noexcept {
-        return self._distances(j);
+    constexpr auto&& dist(this auto&& self, size_t j) noexcept {
+        return self._dists(j);
     }
 
-//    constexpr auto predecessors() const noexcept {
-//        return EncodedObjectIter<const tail_type>(_predecessors.begin());
+//    constexpr auto preds() const noexcept {
+//        return EncodedObjectIter<const Tail>(_preds.begin());
 //    }
 //
-//    constexpr auto predecessors() noexcept {
-//        return EncodedObjectIter<tail_type>(_predecessors.begin());
+//    constexpr auto preds() noexcept {
+//        return EncodedObjectIter<Tail>(_preds.begin());
 //    }
 
-    constexpr auto predecessor(size_t j) const noexcept {
-        return EncodedObjectRef<const tail_type>(_predecessors(j));
+    constexpr auto pred(size_t j) const noexcept {
+        return EncodedObjectRef<const Tail>(_preds(j));
     }
 
-    constexpr auto predecessor(size_t j) noexcept {
-        return EncodedObjectRef<tail_type>(_predecessors(j));
+    constexpr auto pred(size_t j) noexcept {
+        return EncodedObjectRef<Tail>(_preds(j));
     }
 
     constexpr bool exists(size_t j) const noexcept {
-        return N != _distances(j);
+        return NMAX != _dists(j);
     }
 
     template<typename Function, typename U>
     constexpr U reduce(size_t j, Function func, U value) const noexcept {
         if (exists(j)) {
             while(j != _i) {
-                tail_type t = predecessor(j);
-                value = func(edge_type(t, j), value);
+                Tail t = pred(j);
+                value = func(Edge(t, j), value);
                 j = t.node;
             }
         }
@@ -918,48 +889,37 @@ public:
     constexpr void walk(size_t j, Function func) const noexcept {
         if (exists(j)) {
             while (j != _i) {
-                tail_type t = predecessor(j);
-                func(edge_type(t, j));
+                Tail t = pred(j);
+                func(Edge(t, j));
                 j = t.node;
             }
         }
     }
 
-    constexpr signed_int flow(size_t j, graph_type const& graph) const noexcept {
+    constexpr sint_t flow(size_t j, Graph const& graph) const noexcept {
         if(_i == j || !exists(j)) {
             return 0;
         }
 
-        const signed_int fmax = std::numeric_limits<signed_int>::max();
+        const sint_t fmax = std::numeric_limits<sint_t>::max();
 
-        return reduce(j, [&graph](edge_type e, signed_int x) { return std::min(x, graph.flow(e)); }, fmax);
+        return reduce(j, [&graph](Edge e, sint_t x) { return std::min(x, graph.flow(e)); }, fmax);
     }
 };
 
 /**
  * Dijkstra shortest path with Dial modification (bucket).
  */
-template <typename T, size_t N, size_t M>
 class Dijkstra {
-public:
-    typedef typename GraphTraits<T, N, M>::edge_type edge_type;
-    typedef typename GraphTraits<T, N, M>::node_type node_type;
-    typedef typename GraphTraits<T, N, M>::cost_type cost_type;
-    typedef typename EdgeTraits<T, M>::head_type head_type;
-    typedef Graph<T, N, M> graph_type;
-    typedef Paths<T, N, M> paths_type;
-    typedef cost_type dist_type;
-
-private:
-    mutable Vector<Vector<dist_type, N>, N> _bucket;
+    mutable Vector<Vector<dist_t, NMAX>, NMAX> _bucket;
 
 public:
-    constexpr void shortest_paths(graph_type const& graph, size_t s, paths_type& paths) const noexcept {
+    constexpr void shortest_paths(Graph const& graph, size_t s, Paths& paths) const noexcept {
         paths.reset(graph.size(), s);
 
         _bucket.reset(graph.size());
 
-        paths.distance(s) = 0;
+        paths.dist(s) = 0;
         _bucket(0).push_back(s);
 
         auto first_nonempty = [](auto& container) {
@@ -969,15 +929,15 @@ public:
         };
 
         for (auto stack = first_nonempty(_bucket); stack != _bucket.end(); stack = first_nonempty(_bucket)) {
-            dist_type i = stack->pop_back();
+            dist_t i = stack->pop_back();
 
-            for (head_type h: graph.outbound(i)) {
-                const node_type j = h.node;
-                dist_type dist = paths.distance(i) + graph.cost(edge_type(i, j, h.edge));
-                if (dist < paths.distance(j)) {
+            for (Head h: graph.outbound(i)) {
+                const node_t j = h.node;
+                dist_t dist = paths.dist(i) + graph.cost(Edge(i, j, h.edge));
+                if (dist < paths.dist(j)) {
                     _bucket(dist).push_back(j);
-                    paths.distance(j) = dist;
-                    paths.predecessor(j) = Endpoint<node_type, M>(i, h.edge);
+                    paths.dist(j) = dist;
+                    paths.pred(j) = Tail(i, h.edge);
                 }
             }
         }
@@ -987,33 +947,22 @@ public:
 /**
  * The workhorse class.
  */
-template <typename T, size_t N, size_t M>
 class Optimizer {
 public:
-    typedef typename TypeTraits<T>::unsigned_int unsigned_int;
-    typedef typename TypeTraits<T>::signed_int signed_int;
-    typedef typename GraphTraits<T, N, M>::node_type node_type;
-    typedef typename GraphTraits<T, N, M>::endpoint_type endpoint_type;
-    typedef typename GraphTraits<T, N, M>::head_type head_type;
-    typedef typename GraphTraits<T, N, M>::tail_type tail_type;
-    typedef typename GraphTraits<T, N, M>::edge_type edge_type;
-    typedef Graph<T, N, M> graph_type;
-    typedef Vector<node_type, N> node_vector;
-    typedef Vector<signed_int, N> sint_vector;
-    typedef Vector<unsigned_int, N> uint_vector;
+    typedef Vector<node_t, NMAX> node_vector;
+    typedef Vector<sint_t, NMAX> sint_vector;
+//    typedef Vector<uint_t, NMAX> uint_vector;
 private:
-    mutable node_vector _nodes1;    //! Vector 1 holding nodes.
-    mutable node_vector _nodes2;    //! Vector 2 holding nodes.
-    mutable sint_vector _snums1;    //! Vector holding signed integers
-//    mutable pair_vector _pairs1;  //! Vector holding node pairs.
-    mutable Paths<T, N, M> _paths1; //! Structure of shortest paths
+    mutable node_vector _nodes1; //! Vector 1 holding nodes.
+    mutable node_vector _nodes2; //! Vector 2 holding nodes.
+    mutable sint_vector _sints1; //! Vector holding signed integers
+    mutable Paths _paths1;       //! Structure of shortest paths
 
-    Dijkstra<T, N, M> _dijkstra;
-//    Tarjan _tarjan;
+    Dijkstra _dijkstra;
 public:
 
     constexpr void find_deficit_and_excess_nodes(
-        graph_type const& graph,
+        Graph const& graph,
         node_vector& deficit,
         node_vector& excess,
         sint_vector& balances
@@ -1041,10 +990,10 @@ public:
 //        graph.disconnect(bridges);
 //    }
 
-    constexpr unsigned_int max_circulation(graph_type& graph) const noexcept {
+    constexpr uint_t max_circulation(Graph& graph) const noexcept {
         auto& deficit = _nodes1;
         auto& excess = _nodes2;
-        auto& balances = _snums1;
+        auto& balances = _sints1;
         auto& paths = _paths1;
 
         // Find and remove minimal path flow.
@@ -1054,14 +1003,14 @@ public:
             for (auto ki = deficit.begin(); ki != deficit.end();) {
                 auto k = *ki;
                 _dijkstra.shortest_paths(graph, k, paths);
-//                std::cout << "sortest: " << paths.i() << " -> " << paths.distances() << ";" << paths.predecessors() << std::endl;
+//                std::cout << "sortest: " << paths.i() << " -> " << paths.dists() << ";" << paths.preds() << std::endl;
                 for (auto li = excess.begin(); li != excess.end();) {
                     auto l = *li;
                     if (paths.exists(l)) {
                         // Flow f(P_{kl}) along the path P_{kl}
-                        unsigned_int f = std::min(std::min((signed_int)-balances(k), balances(l)), paths.flow(l, graph));
-                        paths.walk(l, [&graph, f](edge_type e) {
-                            const auto r = e.reversed((e.m + 1) %M);
+                        uint_t f = std::min(std::min((sint_t)-balances(k), balances(l)), paths.flow(l, graph));
+                        paths.walk(l, [&graph, f](Edge e) {
+                            const auto r = e.reversed((e.m + 1) % MMAX);
                             graph.sub(e, f);
                             graph.add(r, f);
                             graph.flow(e) += f;
@@ -1081,30 +1030,18 @@ public:
         return flow_cost(graph);
     }
 
-    constexpr unsigned_int flow_cost(graph_type const& graph) const noexcept {
-        unsigned_int total = 0;
+    constexpr flow_t flow_cost(Graph const& graph) const noexcept {
+        flow_t total = 0;
         for (auto const& ref: graph.outbound()) {
             auto i = ref.i();
-            for (head_type h: ref.list()) {
-                edge_type e(i, h);
+            for (Head h: ref.list()) {
+                Edge e(i, h);
                 total += graph.cost(e) * graph.flow(e);
             }
         }
         return total;
     }
 };
-
-} /* namespace Templates */
-
-typedef uint8_t unum_t; // unsigned integer value
-typedef typename std::make_signed<unum_t>::type snum_t; // signed integer value
-
-constexpr unum_t NMAX = 20; //! Max supported no. nodes in graph.
-constexpr unum_t FMAX = 16; //! Max supported total capacity (sum of arc capacities).
-
-typedef Templates::Graph<unum_t, NMAX, 2> Graph;
-typedef Templates::Optimizer<unum_t, NMAX, 2> Optimizer;
-typedef Templates::Edge<unum_t, 2> Edge;
 
 /**
  * Tarjan's algorithm -- identifies strongly connected components in graph

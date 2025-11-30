@@ -17,19 +17,7 @@ std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>&
     return os;
 }
 
-namespace Templates {
-
-//template<typename CharT, class Traits, typename T, size_t N>
-//std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, jector<T, N> const& vector) {
-//    os << "[";
-//    for(size_t i = 0; i < vector.size(); i++) {
-//        os << sep(i) << vector(i);
-//    }
-//    os << "]";
-//    return os;
-//}
-
-template<typename CharT, class Traits, size_t N, typename T>
+template<typename CharT, class Traits, typename T, size_t N>
 std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Matrix<T, N> const& matrix) {
     for(size_t i = 0; i < matrix.size(); i++) {
         os << "[";
@@ -50,20 +38,20 @@ std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>&
     return os;
 }
 
-template<typename CharT, class Traits, typename T, size_t M>
-std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Edge<T, M> const& edge) {
+template<typename CharT, class Traits>
+std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Edge const& edge) {
     os << "(" << (int) edge.i << ", " << (int) edge.j << ")[" << (int) edge.m << "]";
     return os;
 }
 
-template<typename CharT, class Traits, typename T, size_t M>
-std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Endpoint<T, M> const& endpoint) {
+template<typename CharT, class Traits>
+std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Endpoint const& endpoint) {
     os << (int) endpoint.node << "[" << (int) endpoint.edge << "]";
     return os;
 }
 
 template<typename CharT, class Traits, typename ObjectT, size_t N>
-std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, EncodedObjectSortSeq<ObjectT, N> const& seq) {
+std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, EncodedObjectSortSeq<ObjectT, N> const& seq) {
     size_t k = 0;
     for (auto obj: seq) {
         os << sep(k++, ", ") << (ObjectT)obj;
@@ -71,8 +59,8 @@ std::basic_ostream<CharT,Traits>& operator<< (std::basic_ostream<CharT, Traits>&
     return os;
 }
 
-template<typename CharT, class Traits, typename EdgeT, size_t N>
-std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, AdjLst<EdgeT, N> const& list) {
+template<typename CharT, class Traits>
+std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, AdjLst const& list) {
     size_t k = 0;
     for (auto const& ref: list) {
         os << sep(k++, "\n") << (int)ref.i() << " -> {" <<  ref.list() << "}";
@@ -85,17 +73,15 @@ std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>
 //    os << std::endl
 //       << "-- distances:"
 //       << std::endl
-//       << paths.distances()
+//       << paths.dists()
 //       << "-- predecessors:"
 //       << std::endl
 //       << paths.predecessors();
 //    return os;
 //}
 //
-template<typename CharT, class Traits, typename T, size_t N, size_t M>
-std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Graph<T, N, M> const& graph) {
-    typedef typename Graph<T, N, M>::edge_type edge_type;
-
+template<typename CharT, class Traits>
+std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>& os, Graph const& graph) {
     os << "--- nodes(" << graph.nodes().size() << "): " << std::endl << "[" << graph.nodes() << "]" << std::endl;
     os << "--- outbound(" << graph.outbound().size() << "): " << std::endl << graph.outbound() << std::endl;
     os << "--- inbound(" << graph.inbound().size() << "): " << std::endl << graph.inbound() << std::endl;
@@ -104,13 +90,11 @@ std::basic_ostream<CharT, Traits>& operator<< (std::basic_ostream<CharT, Traits>
     size_t k = 0;
     for (auto ref: graph.outbound()) {
         for (auto head: ref.list()) {
-            auto e = edge_type(ref.i(), head);
+            auto e = Edge(ref.i(), head);
             os << sep(k++, "\n") << e << " = { c: " << (int)graph.cost(e) << ", u:" << (int)graph.caps(e) << ", x: " << (int)graph.flow(e) << " }";
         }
     }
     return os;
 }
-
-} /* namespace Templates */
 
 #endif /* LC_1601_IO_HPP */
