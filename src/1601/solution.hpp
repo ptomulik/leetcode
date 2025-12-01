@@ -22,9 +22,9 @@
 #include <type_traits>
 #include <vector>
 
-typedef uint8_t unum_t; // unsigned integer value
-typedef typename std::make_unsigned<unum_t>::type uint_t;
-typedef typename std::make_signed<unum_t>::type sint_t; // signed integer value
+typedef int8_t int_t; //! Base integer type.
+typedef typename std::make_unsigned<int_t>::type uint_t;   //! Unsigned integer value.
+typedef typename std::make_signed<int_t>::type sint_t;     //! Signed integer value.
 typedef uint_t node_t; //! Node identifier.
 typedef uint_t edge_t; //! Arc number for multiarc.
 typedef sint_t flow_t; //! Arc flow.
@@ -36,7 +36,7 @@ typedef sint_t potn_t; //! Node potential.
 
 constexpr const size_t NMAX = 20; //! Max supported no. nodes in graph.
 constexpr const size_t MMAX = 2;  //! Residual network is a multigraph with up to MMAX parallel arcs.
-// constexpr unum_t FMAX = 16; //! Max supported total capacity (sum of arc capacities).
+// constexpr uint_t FMAX = 16; //! Max supported total capacity (sum of arc capacities).
 
 constexpr cost_t cost_max() noexcept {
     return std::numeric_limits<cost_t>::max();
@@ -1050,21 +1050,21 @@ public:
 //class Tarjan {
 //public:
 //    typedef Vector<bool, NMAX> BoolVec;
-//    typedef Vector<snum_t, NMAX> SnumVec;
-//    typedef Vector<unum_t, NMAX> NodeStack;
+//    typedef Vector<sint_t, NMAX> SnumVec;
+//    typedef Vector<uint_t, NMAX> NodeStack;
 //private:
 //    mutable BoolVec _onstack;
 //    mutable SnumVec _low;
 //    mutable SnumVec _tin;
-//    mutable unum_t  _timer;
+//    mutable uint_t  _timer;
 //    mutable NodeStack _stack;
 //
 //    template<typename BridgeFunc>
 //    constexpr void _bridges_dfs(
 //        Graph const& graph,
 //        BridgeFunc bridge,
-//        snum_t i,
-//        snum_t p = -1
+//        sint_t i,
+//        sint_t p = -1
 //    ) const noexcept {
 //        _tin(i) = _low(i) = _timer++;
 //
@@ -1092,7 +1092,7 @@ public:
 //            if (-1 != p) {
 //                bridge(Pair(p, i));
 //            }
-//            snum_t j;
+//            sint_t j;
 //            do {
 //                j = _stack.pop_back();
 //                _onstack(j) = false;
@@ -1129,7 +1129,7 @@ class Solution {
     auto _setup_graph(int n, std::vector<std::vector<int>> const& requests) {
         graph.reset(n);
 
-        unum_t loops = 0;
+        uint_t loops = 0;
 
         for(auto const& r: requests) {
             if (r[0] == r[1]) {
@@ -1157,7 +1157,7 @@ public:
     Optimizer optimizer;
 
     int maximumRequests(int n, std::vector<std::vector<int>> const& requests) {
-        unum_t loops = _setup_graph(n, requests);
+        uint_t loops = _setup_graph(n, requests);
         // return loops + optimizer.max_circulation(graph);
         return loops;
     }
